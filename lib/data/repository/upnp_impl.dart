@@ -1,9 +1,8 @@
 import 'dart:async';
 
 import 'package:tvfree/domain/model/device.dart';
+import 'package:tvfree/domain/repository/upnps.dart';
 import 'package:tvfree/objectbox.g.dart';
-
-import '../../domain/repository/upnps.dart';
 
 class UpnpRepositoryImpl implements UpnpRepository {
   final Store database;

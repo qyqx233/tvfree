@@ -1,11 +1,10 @@
 import 'package:flutter/foundation.dart';
+import 'package:tvfree/domain/model/device.dart';
+import 'package:tvfree/domain/repository/upnps.dart';
 import 'package:tvfree/internal/castscreen/castscreen.dart';
 import 'package:tvfree/internal/network/addr.dart';
 import 'package:tvfree/internal/upnp/ssdp.dart';
 import 'package:tvfree/internal/util/stream.dart';
-
-import '../model/device.dart';
-import '../repository/upnps.dart';
 
 enum DeviceState {
   connected,

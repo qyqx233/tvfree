@@ -2,10 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:signals/signals_flutter.dart';
+import 'package:tvfree/domain/model/device.dart';
+import 'package:tvfree/domain/usecase/control_device.dart';
 import 'package:tvfree/domain/usecase/crud_device.dart';
-
-import '../../domain/model/device.dart';
-import '../../domain/usecase/control_device.dart';
 
 class DeviceListVM {
   // 单例实例

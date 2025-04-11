@@ -205,7 +205,7 @@ class _M3u8ParserViewState extends State<M3u8ParserView> {
                   TextField(
                     controller: _urlController,
                     decoration: const InputDecoration(
-                      labelText: 'VIDEO URL',
+                      labelText: 'URL',
                       hintText: '输入要解析视频的网址',
                       border: OutlineInputBorder(),
                     ),

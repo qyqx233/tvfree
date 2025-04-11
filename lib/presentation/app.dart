@@ -2,16 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart'; // 引入 go_router
 import 'package:tvfree/data/repository/kv.dart';
 import 'package:tvfree/domain/repository/m3u8s.dart';
+import 'package:tvfree/domain/repository/upnps.dart';
 import 'package:tvfree/domain/usecase/control_device.dart';
 import 'package:tvfree/domain/usecase/crud_device.dart';
 import 'package:tvfree/domain/usecase/m3u8_parser.dart';
+import 'package:tvfree/presentation/viewmodel/device_list.dart';
 import 'package:tvfree/presentation/viewmodel/m3u8_parser.dart'; // 导入M3u8ParserVM
+import 'package:tvfree/presentation/views/device_list.dart';
 import 'package:tvfree/presentation/views/m3u8_parser.dart'; // 导入M3u8ParserView
 import 'package:tvfree/presentation/views/resource.dart';
-
-import '../domain/repository/upnps.dart';
-import 'viewmodel/device_list.dart';
-import 'views/device_list.dart';
 
 class TvFreeApp extends StatelessWidget {
   const TvFreeApp({

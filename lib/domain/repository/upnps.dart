@@ -1,4 +1,4 @@
-import '../model/device.dart';
+import 'package:tvfree/domain/model/device.dart';
 
 abstract class UpnpRepository {
   Future<List<UpnpDevice>> getAll();

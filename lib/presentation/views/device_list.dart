@@ -3,10 +3,9 @@ import 'package:signals/signals_flutter.dart';
 import 'package:tvfree/domain/model/device.dart';
 import 'package:tvfree/domain/signals/signal.dart';
 import 'package:tvfree/domain/usecase/control_device.dart';
+import 'package:tvfree/presentation/viewmodel/device_list.dart';
 import 'package:tvfree/presentation/views/addr_choice.dart';
 import 'package:tvfree/presentation/views/device_edit.dart';
-
-import '../viewmodel/device_list.dart';
 
 class DeviceListView extends StatefulWidget {
   const DeviceListView({super.key, required this.viewModel});
@@ -26,7 +25,7 @@ class _DeviceListViewState extends State<DeviceListView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Upnp设备'),
+        title: const Text('投屏设备'),
         actions: [
           // 添加网络地址选择按钮
           IconButton(
