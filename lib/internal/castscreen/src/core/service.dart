@@ -43,6 +43,7 @@ final class Service {
     final xmlBody = _buildXml(action, inputConvertor(input));
     final resp = await Http.post(
       spec.controlReqURL,
+      // 'http://192.168.5.24:38400/MediaServer/rendererdevicedesc.xml',
       (xml) => _parseXml(xml, action),
       body: xmlBody,
       headers: _headers(spec, action),
@@ -62,6 +63,9 @@ final class Service {
 
   String _buildXml(String action, Map<String, String> arguments) {
     final xb = XmlBuilder();
+    arguments['CurrentURIMetaData'] =
+        'lt;DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/"&gt;&lt;item id="123" parentID="-1" restricted="1"&gt;&lt;res protocolInfo="http-get:*:video/*:*;DLNA.ORG_OP=01;DLNA.ORG_FLAGS=01700000000000000000000000000000"&gt;http://videong.skzic.cn/20190412/K7FXYvig/1622kb/hls/index.m3u8?wsSecret=e183cce42f0a622236cb29b5122990da&amp;amp;wsTime=1596287955&lt;/res&gt;&lt;upnp:storageMedium&gt;UNKNOWN&lt;/upnp:storageMedium&gt;&lt;upnp:writeStatus&gt;UNKNOWN&lt;/upnp:writeStatus&gt;&lt;dc:title&gt;01&lt;/dc:title&gt;&lt;upnp:class&gt;object.item.videoItem&lt;/upnp:class&gt;&lt;/item&gt;&lt;/DIDL-Lite&gt;';
+    arguments['InstanceID'] = '0';
     xb.processing('xml', 'version="1.0"');
     xb.element('s:Envelope', nest: () {
       xb.attribute('xmlns:s', 'http://schemas.xmlsoap.org/soap/envelope/');

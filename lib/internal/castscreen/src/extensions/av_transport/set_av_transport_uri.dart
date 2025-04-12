@@ -32,6 +32,7 @@ final class SetAVTransportURIOutput {
 
   /// The factory method fromMap
   factory SetAVTransportURIOutput.fromMap(Map<String, String> m) {
+    // ignore: avoid_print
     return const SetAVTransportURIOutput();
   }
 }

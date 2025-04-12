@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -13,7 +15,7 @@ Map<String, String> parseSsdpHeaders(String response) {
   for (final line in lines) {
     if (line.contains(':')) {
       final index = line.indexOf(':');
-      final key = line.substring(0, index).trim();
+      final key = line.substring(0, index).trim().toUpperCase();
       final value = line.substring(index + 1).trim();
       headers[key] = value;
     }
@@ -52,11 +54,15 @@ extension RawDatagramSocketExt on RawDatagramSocket {
 
 class UpnpDeviceDetector {
   static Future<UpnpDevice?> testUpnp(String ip) async {
-    final device = await UpnpDeviceDetector.checkMediaRendererSupport(ip);
-    if (device == null) return null;
-    final device2 = await UpnpDeviceDetector.parseDescription(device);
-    if (device2 == null) return null;
-    return device2;
+    try {
+      final device = await UpnpDeviceDetector.checkMediaRendererSupport(ip);
+      if (device == null) return null;
+      final device2 = await UpnpDeviceDetector.parseDescription(device);
+      if (device2 == null) return null;
+      return device2;
+    } catch (e) {
+      return null;
+    }
   }
 
   static Future<UpnpDevice?> checkMediaRendererSupport(String targetIp,
@@ -65,9 +71,9 @@ class UpnpDeviceDetector {
     try {
       socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
       final ssdpRequest = "M-SEARCH * HTTP/1.1\r\n"
-          "HOST: 239.255.255.250:$port\r\n" // This HOST is for multicast
+          "HOST: 239.255.255.250:$port\r\n"
           "MAN: \"ssdp:discover\"\r\n"
-          "MX: 1\r\n" // Shorter MX for unicast might be appropriate
+          "MX: 1\r\n"
           "ST: urn:schemas-upnp-org:device:MediaRenderer:1\r\n"
           "\r\n";
       final data = utf8.encode(ssdpRequest);

@@ -22,46 +22,61 @@ class ControlDevice {
         .map((x) => NetAddr.getAllIPsInSubnet(x))
         .expand((x) => x)
         .toList();
+    // debugPrint("发现设备 $ips");
     final results = await Streams.concurrent(
         dataList: ips,
         process: UpnpDeviceDetector.testUpnp,
-        maxConcurrency: 100);
+        maxConcurrency: 90);
     return results;
   }
 
-  Future<bool> toggleConnect(int id, DeviceState state) async {
-    final device = await _upnpRepository.get(id);
+  Future<bool> connectCast(UpnpDevice? device) async {
+    device ??= await _upnpRepository.getConnectedDevice();
     if (device == null) {
+      return false;
+    }
+    final devs = await CastScreen.discoverByIP(
+        ip: Uri.parse(device.controlURL!).host,
+        ST: "urn:schemas-upnp-org:device:MediaRenderer:1",
+        timeout: Duration(seconds: 2));
+    debugPrint("发现设备 $devs");
+    if (devs.isEmpty) {
+      return false; // Return false to indicate unsuccessful connection
+    }
+    _device = devs.first; // Return true to indicate successful connection
+    return true;
+  }
+
+  Future<bool> toggleConnect(int id, DeviceState state) async {
+    final upnp = await _upnpRepository.get(id);
+    if (upnp == null) {
       throw Exception('Device not found');
     }
     if (state == DeviceState.connected) {
-      final devs = await CastScreen.discoverByIP(
-          ip: Uri.parse(device.controlURL!).host,
-          ST: "urn:schemas-upnp-org:device:MediaRenderer:1",
-          timeout: Duration(seconds: 2));
-      if (devs.isEmpty) {
-        return false; // Return false to indicate unsuccessful connection
+      if (!await connectCast(upnp)) {
+        return false;
       }
-      _device = devs.first;
-      debugPrint("连接成功 ${_device.toString()}");
-      // _device?.alive();
-      device.isConnected = true;
+      upnp.isConnected = true;
     } else {
-      device.isConnected = false;
+      upnp.isConnected = false;
     }
-    await _upnpRepository.update(device);
+    await _upnpRepository.update(upnp);
     return state == DeviceState.connected
         ? true
         : false; // Return true to indicate successful connection
   }
 
   Future<bool> castScreen(String url) async {
-    debugPrint(_device.toString());
+    debugPrint("device=$_device");
     if (_device == null) {
-      throw Exception('Device not connected');
+      if (!await connectCast(null)) {
+        return false;
+      }
     }
 
-    await _device!.setAVTransportURI(SetAVTransportURIInput(url));
+    final output =
+        await _device!.setAVTransportURI(SetAVTransportURIInput(url));
+    debugPrint(output.toString());
     return true;
   }
 }

@@ -50,6 +50,7 @@ class DeviceListVM {
   void init() {
     if (_isInitialized) return;
     _isInitialized = true;
+    debugPrint("DeviceListVM init");
 
     _connectDevices << streamController.stream;
     _crudDevice.getAll().then((value) {
@@ -75,6 +76,7 @@ class DeviceListVM {
 
   Future<void> discoverDevices(String ip) async {
     if (_isDiscovering) {
+      debugPrint("正在发现设备，请稍后再试。");
       return;
     }
     try {
