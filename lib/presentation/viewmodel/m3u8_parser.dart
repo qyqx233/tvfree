@@ -56,6 +56,7 @@ class M3u8ParserVM {
 
     try {
       isLoading.value = true;
+      parseResults.value = [];
       final parser = activeParser.value!;
       final Map<String, dynamic> requestBody = {
         'url': url,
