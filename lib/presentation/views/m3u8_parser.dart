@@ -181,7 +181,7 @@ class _M3u8ParserViewState extends State<M3u8ParserView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('M3U8解析器'),
+        title: const Text('视频解析器'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

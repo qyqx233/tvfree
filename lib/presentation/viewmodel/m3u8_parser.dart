@@ -12,7 +12,7 @@ class M3u8ParserVM {
   // 单例实例
   static M3u8ParserVM? _instance;
   final sc = StreamController<List<M3u8Parser>>.broadcast();
-  final M3u8ParserService _repo;
+  final M3u8ParserService _m3u8ParserService;
   final CrudDevice crudDevice;
   final ControlDevice controlDevice;
   final parsers = listSignal<M3u8Parser>([]);
@@ -32,7 +32,8 @@ class M3u8ParserVM {
   }
 
   // 私有构造函数
-  M3u8ParserVM._internal(this._repo, this.crudDevice, this.controlDevice) {
+  M3u8ParserVM._internal(
+      this._m3u8ParserService, this.crudDevice, this.controlDevice) {
     _connectParsers << sc.stream;
     activeParser = computed(() {
       try {
@@ -94,7 +95,7 @@ class M3u8ParserVM {
 
   Future<void> addM3u8Parser(M3u8Parser parser) async {
     try {
-      _repo.add(parser);
+      await _m3u8ParserService.add(parser);
       await refresh();
     } catch (e) {
       if (kDebugMode) {
@@ -106,7 +107,7 @@ class M3u8ParserVM {
 
   Future<void> removeM3u8Parser(M3u8Parser parser) async {
     try {
-      await _repo.remove(parser);
+      await _m3u8ParserService.remove(parser);
       await refresh();
     } catch (e) {
       if (kDebugMode) {
@@ -118,7 +119,7 @@ class M3u8ParserVM {
 
   Future<void> updateM3u8Parser(M3u8Parser parser) async {
     try {
-      await _repo.update(parser);
+      await _m3u8ParserService.update(parser);
       await refresh();
     } catch (e) {
       if (kDebugMode) {
@@ -130,7 +131,7 @@ class M3u8ParserVM {
 
   Future<List<M3u8Parser>> getAll() async {
     // 模拟从数据库加载
-    return _repo.getAll();
+    return _m3u8ParserService.getAll();
   }
 
   // 获取当前活跃的解析器
