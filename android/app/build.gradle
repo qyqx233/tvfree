@@ -15,6 +15,16 @@ android {
         targetCompatibility = JavaVersion.VERSION_1_8
     }
 
+    sourceSets {
+        // main.java.srcDirs += 'src/main/kotlin'
+        // jniLibs.srcDirs = ['../native/libs'] // 或你存放.so文件的路径
+        // main {
+        //     jniLibs {
+        //         srcDirs = ['../native/libs']
+        //     }
+        // }
+    }
+
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_1_8
     }

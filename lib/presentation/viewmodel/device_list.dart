@@ -50,11 +50,12 @@ class DeviceListVM {
   void init() {
     if (_isInitialized) return;
     _isInitialized = true;
-    debugPrint("DeviceListVM init");
-
+    debugPrint(">>>>>> DeviceListVM init");
     _connectDevices << streamController.stream;
     _crudDevice.getAll().then((value) {
-      streamController.sink.add(value);
+      _controlDevice.checkExists(value).then((exists) {
+        streamController.sink.add(exists);
+      });
     });
   }
 
@@ -65,28 +66,26 @@ class DeviceListVM {
 
   Future<bool> toggleConnect(UpnpDevice device, DeviceState state) async {
     final isConnected = await _controlDevice.toggleConnect(device.id!, state);
-    streamController.sink.add(devices.map((e) {
-      if (e.id == device.id) {
-        return e.copyWith(isConnected: isConnected);
-      }
-      return e;
-    }).toList());
+    streamController.sink.add(await _crudDevice.getAll());
     return isConnected;
   }
 
-  Future<void> discoverDevices(String ip) async {
+  Future<void> discoverDevices(String? ip) async {
     if (_isDiscovering) {
       debugPrint("正在发现设备，请稍后再试。");
       return;
     }
     try {
       _isDiscovering = true;
-      final discoverNew = await _controlDevice.discoverDevice(ip);
+      final discoverNew = (await _controlDevice.discoverDevice(ip))
+          .whereType<UpnpDevice>()
+          .toList();
       final deviceOrigin = devices.peek();
       final deviceNew =
           discoverNew.where((v) => !deviceOrigin.contains(v)).toList();
       await _crudDevice.addMany(deviceNew);
-      streamController.sink.add([...deviceOrigin, ...deviceNew].toList());
+      debugPrint("发现新设备：$deviceNew $deviceOrigin");
+      streamController.sink.add(await _crudDevice.getAll());
       return;
     } finally {
       _isDiscovering = false;

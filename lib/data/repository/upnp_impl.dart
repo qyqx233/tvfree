@@ -14,6 +14,7 @@ class UpnpRepositoryImpl implements UpnpRepository {
     return id;
   }
 
+
   @override
   Future<List<UpnpDevice>> getAll() async {
     final res = database.box<UpnpDevice>().getAll();

@@ -2,9 +2,14 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ffi';
 import 'dart:io';
+import 'dart:isolate';
 
+import 'package:ffi/ffi.dart';
+import 'package:flutter/foundation.dart';
 import 'package:tvfree/domain/model/device.dart';
+import 'package:tvfree/internal/dll/tv.dart';
 import 'package:tvfree/internal/util/http.dart';
 import 'package:xml/xml.dart' as xml;
 
@@ -53,16 +58,62 @@ extension RawDatagramSocketExt on RawDatagramSocket {
 }
 
 class UpnpDeviceDetector {
-  static Future<UpnpDevice?> testUpnp(String ip) async {
+  static Future<UpnpDevice?> testUpnp(String ip, {fetch = true}) async {
+    // print('testUpnp $ip $fetch');
     try {
       final device = await UpnpDeviceDetector.checkMediaRendererSupport(ip);
+      // print(device);
       if (device == null) return null;
-      final device2 = await UpnpDeviceDetector.parseDescription(device);
-      if (device2 == null) return null;
-      return device2;
+      if (fetch) {
+        final device2 = await UpnpDeviceDetector.parseDescription(device);
+        if (device2 == null) return null;
+        return device2;
+      } else {
+        return device;
+      }
     } catch (e) {
+      print(e); // Handle the erro
       return null;
     }
+  }
+
+  static Future<List<UpnpDevice>> scanUpnp() async {
+    debugPrint("scanUpnp");
+    final receivePort = ReceivePort();
+    List<UpnpDevice> devices = [];
+    if (getNameUrlJSON == null) {
+      debugPrint("getNameUrlJSON is null");
+      return devices;
+    }
+    try {
+      await Isolate.spawn((message) async {
+        Pointer<Utf8> jsonPtr = getNameUrlJSON!();
+        message.send(jsonPtr);
+      }, receivePort.sendPort);
+      Pointer<Utf8> jsonPtr = await receivePort.first;
+      try {
+        String jsonStr = jsonPtr.toDartString();
+        final nameUrl = Map<String, String>.from(jsonDecode(jsonStr));
+        for (var entry in nameUrl.entries) {
+          UpnpDevice upnpDevice = UpnpDevice(
+              friendlyName: entry.key, usn: '', descriptionURL: entry.value);
+          final realDevice =
+              await UpnpDeviceDetector.parseDescription(upnpDevice);
+          if (realDevice != null) {
+            devices.add(realDevice);
+          }
+        }
+      } catch (e) {
+        debugPrint("Error parsing JSON: $e");
+      } finally {
+        freeCString!(jsonPtr);
+      }
+    } catch (e) {
+      debugPrint("Error in isolate: $e");
+    } finally {
+      receivePort.close();
+    }
+    return devices;
   }
 
   static Future<UpnpDevice?> checkMediaRendererSupport(String targetIp,
@@ -125,6 +176,7 @@ class UpnpDeviceDetector {
       final deviceElement = document.findAllElements('device').first;
       final friendlyName =
           deviceElement.getElement('friendlyName')?.innerText ?? 'Unknown';
+      final UDN = deviceElement.getElement('UDN')?.innerText ?? '';
       final manufacturer =
           deviceElement.getElement('manufacturer')?.innerText ?? 'Unknown';
       final avTransportService = deviceElement
@@ -135,6 +187,9 @@ class UpnpDeviceDetector {
       final controlUrlPath =
           avTransportService.getElement('controlURL')?.innerText ?? '';
       urlBase = document.getElement('URLBase')?.innerText ?? urlBase;
+      if (UDN.isEmpty) {
+        return null;
+      }
       final fullControlUrl = urlBase +
           (!urlBase.endsWith('/') && !controlUrlPath.startsWith('/')
               ? '/'
@@ -142,7 +197,7 @@ class UpnpDeviceDetector {
           controlUrlPath;
       return UpnpDevice(
           friendlyName: friendlyName,
-          usn: upnpDevice.usn,
+          usn: UDN,
           descriptionURL: descriptionURL,
           controlURL: fullControlUrl,
           serviceType: avTransportService.getElement('serviceType')?.innerText,

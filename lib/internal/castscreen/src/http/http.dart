@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 part of 'lib.dart';
 
 abstract final class Http {
@@ -17,6 +19,7 @@ abstract final class Http {
     var m = <String, dynamic>{};
     http.Response response;
     int statusCode = 0;
+    print('>>>>>> Http.get: $url');
     try {
       response = await http.get(Uri.parse(url));
       statusCode = response.statusCode;

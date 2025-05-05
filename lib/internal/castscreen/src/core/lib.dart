@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:tvfree/internal/castscreen/src/core/xml.dart';
 import 'package:xml/xml.dart';
 import 'package:xml/xpath.dart';
 

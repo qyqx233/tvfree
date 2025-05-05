@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:tvfree/domain/model/device.dart';
 import 'package:tvfree/domain/repository/upnps.dart';
@@ -15,9 +16,29 @@ class ControlDevice {
   final UpnpRepository _upnpRepository;
   Device? _device;
 
-  ControlDevice(this._upnpRepository);
+  ControlDevice(this._upnpRepository) {
+    // debugPrint(">>>> ControlDevice init");
+  }
 
-  Future<List<UpnpDevice>> discoverDevice(String ip) async {
+  Future<List<UpnpDevice>> checkExists(List<UpnpDevice> upnps) async {
+    final results = await Future.wait(upnps
+        .map((x) => UpnpDeviceDetector.testUpnp(Uri.parse(x.controlURL!).host,
+            fetch: false))
+        .toList());
+    final zipped = IterableZip([upnps, results]).toList();
+    // final connected = upnps.where((x) => x.isConnected).firstOrNull;
+    for (var element in zipped) {
+      if (element[1] == null && element[0]!.isConnected) {
+        element[0]!.isConnected = false;
+        await _upnpRepository.add(element[0]!);
+      }
+    }
+    final exists = List<UpnpDevice>.from(
+        zipped.where((x) => x[1] != null).map((x) => x[0] as UpnpDevice));
+    return exists;
+  }
+
+  Future<List<UpnpDevice?>> discoverDeviceold(String ip) async {
     var ips = ([ip])
         .map((x) => NetAddr.getAllIPsInSubnet(x))
         .expand((x) => x)
@@ -30,16 +51,28 @@ class ControlDevice {
     return results;
   }
 
+  Future<List<UpnpDevice?>> discoverDevice(String? ip) async {
+    if (ip != null) {
+      var ips = ([ip])
+          .map((x) => NetAddr.getAllIPsInSubnet(x))
+          .expand((x) => x)
+          .toList();
+      // debugPrint("发现设备 $ips");
+      return await Streams.concurrent(
+          dataList: ips,
+          process: UpnpDeviceDetector.testUpnp,
+          maxConcurrency: 90);
+    }
+    return await UpnpDeviceDetector.scanUpnp();
+  }
+
   Future<bool> connectCast(UpnpDevice? device) async {
     device ??= await _upnpRepository.getConnectedDevice();
     if (device == null) {
       return false;
     }
-    final devs = await CastScreen.discoverByIP(
-        ip: Uri.parse(device.controlURL!).host,
-        ST: "urn:schemas-upnp-org:device:MediaRenderer:1",
-        timeout: Duration(seconds: 2));
-    debugPrint("发现设备 $devs");
+    debugPrint("连接设备 ${device.controlURL} ${device.descriptionURL}");
+    final devs = await CastScreen.connectTo(device.descriptionURL);
     if (devs.isEmpty) {
       return false; // Return false to indicate unsuccessful connection
     }
@@ -53,11 +86,21 @@ class ControlDevice {
       throw Exception('Device not found');
     }
     if (state == DeviceState.connected) {
+      final connected = await _upnpRepository.getConnectedDevice();
+      if (connected != null) {
+        if (connected.id == upnp.id) {
+          return true; // Already connected, no action needed
+        } else {
+          connected.isConnected = false;
+          await _upnpRepository.update(connected);
+        }
+      }
       if (!await connectCast(upnp)) {
         return false;
       }
       upnp.isConnected = true;
     } else {
+      // await _device.client.close();
       upnp.isConnected = false;
     }
     await _upnpRepository.update(upnp);
@@ -67,7 +110,7 @@ class ControlDevice {
   }
 
   Future<bool> castScreen(String url) async {
-    debugPrint("device=$_device");
+    // debugPrint("device=$_device");
     if (_device == null) {
       if (!await connectCast(null)) {
         return false;

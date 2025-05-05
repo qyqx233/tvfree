@@ -23,13 +23,13 @@ class Streams {
   /// - [dataList]: 待处理的数据列表
   /// - [process]: 异步处理函数（必须返回 `Future<R>`）
   /// - [maxConcurrency]: 最大并发数（通过 Stream 控制）
-  static Future<List<R>> concurrent<T, R>({
+  static Future<List<R?>> concurrent<T, R>({
     required List<T> dataList,
     required Future<R?> Function(T) process,
     int maxConcurrency = 20,
   }) async {
     if (dataList.isEmpty) return [];
-    final results = <R>[];
+    final results = <R?>[];
 
     // 使用原子变量来跟踪当前索引
     int currentIndex = 0;
@@ -47,11 +47,11 @@ class Streams {
         if (index >= dataList.length) break;
         try {
           final result = await process(dataList[index]);
-          if (result != null) {
-            synchronized(() {
-              results.add(result);
-            });
-          }
+          // if (result != null) {
+          synchronized(() {
+            results.add(result);
+          });
+          // }
         } catch (e) {
           // 处理异常
         }

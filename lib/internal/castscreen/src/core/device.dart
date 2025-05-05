@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 /*
 <root xmlns="urn:schemas-upnp-org:device-1-0">
     <specVersion>
@@ -82,7 +84,7 @@ final class Device {
     return Device._(client, DeviceSpec.fromXml(xml));
   }
 
-  late Map<String, Service> _servicesMap;
+  late Map<String, Service> servicesMap;
   Service? _avTransportService;
   Service? _renderingControlService;
   Service? _connectionManagerService;
@@ -97,12 +99,12 @@ final class Device {
   Service? get connectionManagerService => _connectionManagerService;
 
   /// Get current device provides service
-  Service? getService(String name) => _servicesMap[name];
+  Service? getService(String name) => servicesMap[name];
 
   /// Get current device provides service list
-  List<Service> get services => _servicesMap.values.toList();
+  List<Service> get services => servicesMap.values.toList();
 
-  bool get _realDevice => _servicesMap.isNotEmpty;
+  bool get _realDevice => servicesMap.isNotEmpty;
 
   /// Check current device is alive
   Future<bool> alive() async {
@@ -110,18 +112,35 @@ final class Device {
   }
 
   Future<void> _init() async {
-    _servicesMap = <String, Service>{};
+    servicesMap = <String, Service>{};
     for (var spec in spec.serviceSpecs) {
       if (_supported(spec.serviceId)) {
         var service = Service.build(spec);
         await service._init();
-        _servicesMap[spec.serviceId] = service;
+        servicesMap[spec.serviceId] = service;
       }
     }
-    if (_servicesMap.isNotEmpty) {
-      _avTransportService = _servicesMap[_svcMap[_avt]];
-      _renderingControlService = _servicesMap[_svcMap[_rc]];
-      _connectionManagerService = _servicesMap[_svcMap[_cm]];
+    if (servicesMap.isNotEmpty) {
+      _avTransportService = servicesMap[_svcMap[_avt]];
+      _renderingControlService = servicesMap[_svcMap[_rc]];
+      _connectionManagerService = servicesMap[_svcMap[_cm]];
+    }
+  }
+
+  Future<void> _init2() async {
+    servicesMap = <String, Service>{};
+    for (var spec in spec.serviceSpecs) {
+      if (_supported(spec.serviceId)) {
+        // print('>>>> ${spec.serviceId}');
+        var service = Service.build(spec);
+        await service._init2();
+        servicesMap[spec.serviceId] = service;
+      }
+    }
+    if (servicesMap.isNotEmpty) {
+      _avTransportService = servicesMap[_svcMap[_avt]];
+      _renderingControlService = servicesMap[_svcMap[_rc]];
+      _connectionManagerService = servicesMap[_svcMap[_cm]];
     }
   }
 

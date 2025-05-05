@@ -1,4 +1,4 @@
-// ignore_for_file: constant_identifier_names, non_constant_identifier_names
+// ignore_for_file: constant_identifier_names, non_constant_identifier_names, avoid_print
 
 part of 'lib.dart';
 
@@ -31,6 +31,12 @@ abstract final class CastScreen {
   }) async {
     await _discover(ipv4, ipv6, port, false, ST, timeout, onError);
     return Future.value(_clients.values.toList());
+  }
+
+  static Future<List<Device>> connectTo(String location) async {
+    // _devices.clear();
+    Client client = Client.fromHeader({'LOCATION': location});
+    return [await _initDevice(client)];
   }
 
   static Future<List<Device>> discoverByIP({
@@ -165,6 +171,7 @@ abstract final class CastScreen {
         socket.readEventsEnabled = true;
         if (packet == null) return;
         final data = utf8.decode(packet.data);
+        print('>>>>>> SSDP: $data');
         final parts = data.split('\r\n');
         parts.removeWhere((x) => x.trim().isEmpty);
         final firstLine = parts.removeAt(0);
@@ -199,11 +206,23 @@ abstract final class CastScreen {
   }
 
   static Future<void> _fetchDevice(Client client) async {
-    final resp =
-        await Http.get(client.LOCATION, (xml) => Device.create(client, xml));
+    final resp = await Http.get(client.LOCATION, (xml) {
+      addUrlBaseIfMissingUsing(xml, getHostPort(client.LOCATION));
+      return Device.create(client, xml);
+    });
     final device = resp.data;
     await device._init();
     _devices[device.spec.uuid] = device;
+  }
+
+  static Future<Device> _initDevice(Client client) async {
+    final resp = await Http.get(client.LOCATION, (xml) {
+      addUrlBaseIfMissingUsing(xml, getHostPort(client.LOCATION));
+      return Device.create(client, xml);
+    });
+    final device = resp.data;
+    await device._init2();
+    return device;
   }
 
   static void _joinMulticastV4(

@@ -8,8 +8,8 @@ class CrudDevice {
 
   CrudDevice(this._upnpRepo, this._kvRepo);
 
-  Future<List<UpnpDevice>> getAll() {
-    return _upnpRepo.listAll();
+  Future<List<UpnpDevice>> getAll() async {
+    return await _upnpRepo.listAll();
   }
 
   Future<void> add(UpnpDevice device) async {

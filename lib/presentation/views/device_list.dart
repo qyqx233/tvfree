@@ -37,7 +37,7 @@ class _DeviceListViewState extends State<DeviceListView> {
             icon: const Icon(Icons.search),
             onPressed: () async {
               await widget.viewModel
-                  .discoverDevices(networkAddressSignal.value!);
+                  .discoverDevices(networkAddressSignal.value);
             },
             tooltip: '扫描可投屏设备',
           ),

@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 /*
 <service>
   <serviceType>urn:schemas-upnp-org:service:serviceType:v</serviceType>
@@ -21,16 +23,27 @@ final class Service {
     return Service._(spec);
   }
 
-  late Map<String, ActionSpec> _actionsMap;
+  late Map<String, ActionSpec> actionsMap;
 
   Future<void> _init() async {
     spec.actionList = <ActionSpec>[];
-    _actionsMap = <String, ActionSpec>{};
+    actionsMap = <String, ActionSpec>{};
     final resp = await Http.get(spec.scpdReqURL, ScpdServiceSpec.fromXml);
     spec.actionList.addAll(resp.data.actionList);
     for (var actionSpec in spec.actionList) {
-      _actionsMap[actionSpec.name] = actionSpec;
+      actionsMap[actionSpec.name] = actionSpec;
     }
+  }
+
+  Future<void> _init2() async {
+    spec.actionList = <ActionSpec>[];
+    actionsMap = <String, ActionSpec>{};
+    final resp = await Http.get(spec.scpdReqURL, ScpdServiceSpec.fromXml);
+    spec.actionList.addAll(resp.data.actionList);
+    for (var actionSpec in spec.actionList) {
+      actionsMap[actionSpec.name] = actionSpec;
+    }
+    // print('>>>>>> Service._init2: $actionsMap ${resp.data.actionList}');
   }
 
   /// Invoke a service action, and returns a generics type
@@ -84,9 +97,9 @@ final class Service {
   }
 
   Map<String, String> _parseXml(XmlDocument xml, String action) {
-    final outArgs = _actionsMap[action]!
-        .argumentList
-        .where((arg) => arg.direction == 'out');
+    // print('>>>> parse xml: ${xml.toXmlString()}, $actionsMap, $action');
+    final outArgs =
+        actionsMap[action]!.argumentList.where((arg) => arg.direction == 'out');
     final m = <String, String>{};
     for (var arg in outArgs) {
       m[arg.name] = xml.xpathEvaluate(_xpath(action, arg.name)).string;
