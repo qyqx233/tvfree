@@ -8,7 +8,7 @@ part of 'restful.dart';
 
 ParseM3u8Data _$ParseM3u8DataFromJson(Map<String, dynamic> json) =>
     ParseM3u8Data(
-      episode: (json['episode'] as num).toInt(),
+      episode: (json['episode'] as num?)?.toInt(),
       m3u8: json['m3u8'] as String,
       url: json['url'] as String? ?? '',
       name: json['name'] as String? ?? '',
@@ -18,8 +18,8 @@ ParseM3u8Data _$ParseM3u8DataFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$ParseM3u8DataToJson(ParseM3u8Data instance) =>
     <String, dynamic>{
-      'episode': instance.episode,
       'm3u8': instance.m3u8,
+      'episode': instance.episode,
       'url': instance.url,
       'name': instance.name,
       'duration': instance.duration,
@@ -43,6 +43,56 @@ Map<String, dynamic> _$ParseM3u8RsToJson(ParseM3u8Rs instance) =>
       'code': instance.code,
       'msg': instance.msg,
       'data': instance.data.map((k, e) => MapEntry(k.toString(), e)),
+    };
+
+TvSearchRs _$TvSearchRsFromJson(Map<String, dynamic> json) => TvSearchRs(
+      code: (json['code'] as num).toInt(),
+      msg: json['msg'] as String,
+      data: (json['data'] as Map<String, dynamic>).map(
+        (k, e) => MapEntry(
+            k,
+            (e as Map<String, dynamic>).map(
+              (k, e) => MapEntry(
+                  k,
+                  (e as List<dynamic>)
+                      .map((e) =>
+                          TvSearchData.fromJson(e as Map<String, dynamic>))
+                      .toList()),
+            )),
+      ),
+    );
+
+Map<String, dynamic> _$TvSearchRsToJson(TvSearchRs instance) =>
+    <String, dynamic>{
+      'code': instance.code,
+      'msg': instance.msg,
+      'data': instance.data,
+    };
+
+TvSearchData _$TvSearchDataFromJson(Map<String, dynamic> json) => TvSearchData(
+      m3u8: json['m3u8'] as String,
+    );
+
+Map<String, dynamic> _$TvSearchDataToJson(TvSearchData instance) =>
+    <String, dynamic>{
+      'm3u8': instance.m3u8,
+    };
+
+FileInfoResponse _$FileInfoResponseFromJson(Map<String, dynamic> json) =>
+    FileInfoResponse(
+      err: json['err'] as String,
+      md5: json['md5'] as String,
+      dirs: (json['dirs'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      files:
+          (json['files'] as List<dynamic>?)?.map((e) => e as String).toList(),
+    );
+
+Map<String, dynamic> _$FileInfoResponseToJson(FileInfoResponse instance) =>
+    <String, dynamic>{
+      'err': instance.err,
+      'md5': instance.md5,
+      'dirs': instance.dirs,
+      'files': instance.files,
     };
 
 // **************************************************************************
@@ -93,6 +143,127 @@ class _ApiService implements ApiService {
     late ParseM3u8Rs _value;
     try {
       _value = ParseM3u8Rs.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<TvSearchRs> searchTv(Map<String, dynamic> body) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(body);
+    final _options = _setStreamType<TvSearchRs>(Options(
+      method: 'POST',
+      headers: _headers,
+      extra: _extra,
+    )
+        .compose(
+          _dio.options,
+          '/tv/search',
+          queryParameters: queryParameters,
+          data: _data,
+        )
+        .copyWith(
+            baseUrl: _combineBaseUrls(
+          _dio.options.baseUrl,
+          baseUrl,
+        )));
+    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
+    late TvSearchRs _value;
+    try {
+      _value = TvSearchRs.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options);
+      rethrow;
+    }
+    return _value;
+  }
+
+  RequestOptions _setStreamType<T>(RequestOptions requestOptions) {
+    if (T != dynamic &&
+        !(requestOptions.responseType == ResponseType.bytes ||
+            requestOptions.responseType == ResponseType.stream)) {
+      if (T == String) {
+        requestOptions.responseType = ResponseType.plain;
+      } else {
+        requestOptions.responseType = ResponseType.json;
+      }
+    }
+    return requestOptions;
+  }
+
+  String _combineBaseUrls(
+    String dioBaseUrl,
+    String? baseUrl,
+  ) {
+    if (baseUrl == null || baseUrl.trim().isEmpty) {
+      return dioBaseUrl;
+    }
+
+    final url = Uri.parse(baseUrl);
+
+    if (url.isAbsolute) {
+      return url.toString();
+    }
+
+    return Uri.parse(dioBaseUrl).resolveUri(url).toString();
+  }
+}
+
+// ignore_for_file: unnecessary_brace_in_string_interps,no_leading_underscores_for_local_identifiers,unused_element,unnecessary_string_interpolations
+
+class _StorageApiService implements StorageApiService {
+  _StorageApiService(
+    this._dio, {
+    this.baseUrl,
+    this.errorLogger,
+  }) {
+    baseUrl ??= 'http://localhost:9999';
+  }
+
+  final Dio _dio;
+
+  String? baseUrl;
+
+  final ParseErrorLogger? errorLogger;
+
+  @override
+  Future<FileInfoResponse> getFileInfo(
+    String path,
+    int isMedia,
+  ) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'q': path,
+      r'isMedia': isMedia,
+    };
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<FileInfoResponse>(Options(
+      method: 'GET',
+      headers: _headers,
+      extra: _extra,
+    )
+        .compose(
+          _dio.options,
+          '/fileinfo',
+          queryParameters: queryParameters,
+          data: _data,
+        )
+        .copyWith(
+            baseUrl: _combineBaseUrls(
+          _dio.options.baseUrl,
+          baseUrl,
+        )));
+    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
+    late FileInfoResponse _value;
+    try {
+      _value = FileInfoResponse.fromJson(_result.data!);
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options);
       rethrow;

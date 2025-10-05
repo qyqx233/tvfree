@@ -21,6 +21,10 @@ class M3u8ParserVM {
   final isLoading = signal<bool>(false);
   final currentUrl = signal<String>('');
   final parseResults = listSignal<String>([]);
+  final isBatchMode = signal<bool>(false);
+  final startEpisode = signal<int>(1);
+  final endEpisode = signal<int>(1);
+  final batchProgress = signal<String>('');
 
   // API 服务实例
 
@@ -86,6 +90,111 @@ class M3u8ParserVM {
       return [];
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  // 批量解析方法
+  Future<void> batchParseM3u8(
+      String baseUrl, int startEpisode, int endEpisode) async {
+    if (activeParser.value == null) {
+      throw Exception('没有活跃的解析器');
+    }
+
+    if (startEpisode > endEpisode) {
+      throw Exception('起始集数不能大于终止集数');
+    }
+
+    try {
+      isLoading.value = true;
+      parseResults.value = []; // 批量解析不展示结果，清空之前的结果
+      batchProgress.value = '准备批量解析...';
+
+      final parser = activeParser.value!;
+      int successCount = 0;
+      int failCount = 0;
+      try {
+        // 构建当前集数的URL
+        final Map<String, dynamic> requestBody = {
+          'url': currentUrl,
+          'start': startEpisode,
+          'end': endEpisode,
+        };
+        if (parser.sk != null && parser.sk!.isNotEmpty) {
+          requestBody['sk'] = parser.sk;
+        }
+        final response = await gApiServiceMng
+            .getApiService(parser.url!)
+            .parseM3U8(requestBody);
+        if (response.code != 200) {
+          throw Exception('解析失败: ${response.msg}');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint("提交失败: $e");
+        }
+      }
+
+      // for (int episode = startEpisode; episode <= endEpisode; episode++) {
+      //   batchProgress.value = '正在解析第 $episode 集...';
+
+      //   try {
+      //     // 构建当前集数的URL
+      //     final currentUrl = _buildEpisodeUrl(baseUrl, episode);
+
+      //     final Map<String, dynamic> requestBody = {
+      //       'url': currentUrl,
+      //     };
+      //     if (parser.sk != null && parser.sk!.isNotEmpty) {
+      //       requestBody['sk'] = parser.sk;
+      //     }
+
+      //     final response = await gApiServiceMng
+      //         .getApiService(parser.url!)
+      //         .parseM3U8(requestBody);
+
+      //     if (response.code == 200) {
+      //       successCount++;
+      //     } else {
+      //       failCount++;
+      //     }
+      //   } catch (e) {
+      //     failCount++;
+      //     if (kDebugMode) {
+      //       debugPrint('解析第 $episode 集失败: $e');
+      //     }
+      //   }
+      // }
+
+      batchProgress.value = '批量解析完成！成功: $successCount，失败: $failCount';
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('批量解析M3U8失败: $e');
+      }
+      batchProgress.value = '批量解析失败: $e';
+      rethrow;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // 根据基础URL和集数构建完整的URL
+  String _buildEpisodeUrl(String baseUrl, int episode) {
+    // 尝试从基础URL中提取模式
+    final match = RegExp(r"(\d+)\.html$").firstMatch(baseUrl);
+    if (match != null) {
+      // 如果基础URL已经包含集数，则替换集数
+      return baseUrl.replaceRange(
+        match.start,
+        match.end,
+        '$episode.html',
+      );
+    } else {
+      // 如果基础URL不包含集数，则在末尾添加集数
+      if (baseUrl.endsWith('/')) {
+        return '$baseUrl$episode.html';
+      } else {
+        return '$baseUrl/$episode.html';
+      }
     }
   }
 

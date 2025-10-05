@@ -8,9 +8,12 @@ import 'package:tvfree/domain/usecase/crud_device.dart';
 import 'package:tvfree/domain/usecase/m3u8_parser.dart';
 import 'package:tvfree/presentation/viewmodel/device_list.dart';
 import 'package:tvfree/presentation/viewmodel/m3u8_parser.dart'; // 导入M3u8ParserVM
+import 'package:tvfree/presentation/viewmodel/resource.dart';
+import 'package:tvfree/presentation/viewmodel/settings.dart';
 import 'package:tvfree/presentation/views/device_list.dart';
 import 'package:tvfree/presentation/views/m3u8_parser.dart'; // 导入M3u8ParserView
 import 'package:tvfree/presentation/views/resource.dart';
+import 'package:tvfree/presentation/views/settings.dart';
 
 class TvFreeApp extends StatelessWidget {
   const TvFreeApp({
@@ -27,6 +30,8 @@ class TvFreeApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controlDevice = ControlDevice(upnpsRepository);
+    var _ =
+        ResourceVM(CrudDevice(upnpsRepository, kvRepository), controlDevice);
     final router = GoRouter(
       initialLocation: '/upnp',
       routes: [
@@ -35,7 +40,10 @@ class TvFreeApp extends StatelessWidget {
             return Scaffold(
               body: child,
               bottomNavigationBar: BottomNavigationBar(
+                type: BottomNavigationBarType.fixed,
                 currentIndex: _getNavIndex(state.matchedLocation),
+                selectedItemColor: Theme.of(context).colorScheme.primary,
+                unselectedItemColor: Colors.grey,
                 items: const [
                   BottomNavigationBarItem(
                     icon: Icon(Icons.devices),
@@ -49,6 +57,8 @@ class TvFreeApp extends StatelessWidget {
                     icon: Icon(Icons.cloud),
                     label: '资源',
                   ),
+                  BottomNavigationBarItem(
+                      icon: Icon(Icons.settings), label: "设置")
                 ],
                 onTap: (index) {
                   if (index == 0) {
@@ -57,6 +67,8 @@ class TvFreeApp extends StatelessWidget {
                     context.go('/parser');
                   } else if (index == 2) {
                     context.go('/remote');
+                  } else if (index == 3) {
+                    context.go("/settings");
                   }
                 },
               ),
@@ -83,8 +95,18 @@ class TvFreeApp extends StatelessWidget {
                     )),
             GoRoute(
               path: '/remote',
-              builder: (context, state) => RemoteResourceView(),
+              builder: (context, state) => ResourceView(
+                viewModel: ResourceVM(
+                  CrudDevice(upnpsRepository, kvRepository),
+                  controlDevice,
+                ),
+              ),
             ),
+            GoRoute(
+              path: "/settings",
+              builder: (context, state) =>
+                  SettingsView(viewModel: SettingsVM(kvRepository)),
+            )
           ],
         ),
       ],
@@ -106,6 +128,7 @@ class TvFreeApp extends StatelessWidget {
     if (location.startsWith('/upnp')) return 0;
     if (location.startsWith('/parser')) return 1;
     if (location.startsWith('/remote')) return 2;
+    if (location.startsWith('/settings')) return 3;
     return 0; // 默认返回第一个选项
   }
 }

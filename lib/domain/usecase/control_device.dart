@@ -20,6 +20,10 @@ class ControlDevice {
     // debugPrint(">>>> ControlDevice init");
   }
 
+  Future<void> disConnect() async {
+    _device = null;
+  }
+
   Future<List<UpnpDevice>> checkExists(List<UpnpDevice> upnps) async {
     final results = await Future.wait(upnps
         .map((x) => UpnpDeviceDetector.testUpnp(Uri.parse(x.controlURL!).host,

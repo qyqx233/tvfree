@@ -47,7 +47,7 @@ class UpnpRepositoryImpl implements UpnpRepository {
 
   @override
   Future<int> removeAllDevices() async {
-    return 0;
+    return database.box<UpnpDevice>().removeAll();
   }
 
   @override

@@ -126,9 +126,72 @@
         }
       ],
       "relations": []
+    },
+    {
+      "id": "4:8284622595766908548",
+      "lastPropertyId": "4:7016223083166020926",
+      "name": "M3u8ParseHistory",
+      "properties": [
+        {
+          "id": "1:3989549064432710657",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:8301053507214028257",
+          "name": "url",
+          "type": 9
+        },
+        {
+          "id": "3:2296064126877565282",
+          "name": "result",
+          "type": 9
+        },
+        {
+          "id": "4:7016223083166020926",
+          "name": "createdAt",
+          "type": 10
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "5:4033060055082831206",
+      "lastPropertyId": "5:991764369463061747",
+      "name": "ResourceCache",
+      "properties": [
+        {
+          "id": "1:9160278526394386339",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:7568210190985206034",
+          "name": "query",
+          "type": 9
+        },
+        {
+          "id": "3:9036421750005438470",
+          "name": "resultJson",
+          "type": 9
+        },
+        {
+          "id": "4:434724598880412526",
+          "name": "createdAt",
+          "type": 10
+        },
+        {
+          "id": "5:991764369463061747",
+          "name": "expiresAt",
+          "type": 10
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "3:7392285376877314639",
+  "lastEntityId": "5:4033060055082831206",
   "lastIndexId": "1:5213617542121809068",
   "lastRelationId": "0:0",
   "lastSequenceId": "0:0",

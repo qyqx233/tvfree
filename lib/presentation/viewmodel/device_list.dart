@@ -77,14 +77,12 @@ class DeviceListVM {
     }
     try {
       _isDiscovering = true;
+      await _controlDevice.disConnect();
+      await _crudDevice.removeAll();
       final discoverNew = (await _controlDevice.discoverDevice(ip))
           .whereType<UpnpDevice>()
           .toList();
-      final deviceOrigin = devices.peek();
-      final deviceNew =
-          discoverNew.where((v) => !deviceOrigin.contains(v)).toList();
-      await _crudDevice.addMany(deviceNew);
-      debugPrint("发现新设备：$deviceNew $deviceOrigin");
+      await _crudDevice.addMany(discoverNew);
       streamController.sink.add(await _crudDevice.getAll());
       return;
     } finally {

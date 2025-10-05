@@ -1,6 +1,22 @@
 import 'package:objectbox/objectbox.dart';
 
 @Entity()
+class M3u8ParseHistory  {
+  @Id()
+  int id = 0;
+  String? url;
+  String? result;
+  DateTime? createdAt;
+
+  M3u8ParseHistory({
+    this.id = 0,
+    this.url,
+    this.result,
+    required this.createdAt,
+  });
+}
+
+@Entity()
 class M3u8Parser {
   @Id()
   int id = 0;

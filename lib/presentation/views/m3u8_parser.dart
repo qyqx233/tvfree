@@ -13,11 +13,16 @@ class M3u8ParserView extends StatefulWidget {
 
 class _M3u8ParserViewState extends State<M3u8ParserView> {
   final _urlController = TextEditingController();
+  final _startEpisodeController = TextEditingController(text: '1');
+  final _endEpisodeController = TextEditingController(text: '1');
 
   @override
   void initState() {
     super.initState();
     _urlController.text = widget.viewModel.currentUrl.value;
+    _startEpisodeController.text =
+        widget.viewModel.startEpisode.value.toString();
+    _endEpisodeController.text = widget.viewModel.endEpisode.value.toString();
   }
 
   Future<void> _loadParsers() async {
@@ -42,9 +47,32 @@ class _M3u8ParserViewState extends State<M3u8ParserView> {
     }
 
     try {
-      final results =
-          await widget.viewModel.parseM3u8(widget.viewModel.currentUrl.value);
-      widget.viewModel.parseResults.value = results;
+      if (widget.viewModel.isBatchMode.value) {
+        // 批量解析模式
+        final startEpisode = int.tryParse(_startEpisodeController.text);
+        final endEpisode = int.tryParse(_endEpisodeController.text);
+
+        if (startEpisode == null || endEpisode == null) {
+          _showErrorSnackBar('请输入有效的起始和终止集数');
+          return;
+        }
+
+        if (startEpisode > endEpisode) {
+          _showErrorSnackBar('起始集数不能大于终止集数');
+          return;
+        }
+        debugPrint("=== 批量解析模式");
+        await widget.viewModel.batchParseM3u8(
+          widget.viewModel.currentUrl.value,
+          startEpisode,
+          endEpisode,
+        );
+      } else {
+        // 单集解析模式
+        final results =
+            await widget.viewModel.parseM3u8(widget.viewModel.currentUrl.value);
+        widget.viewModel.parseResults.value = results;
+      }
     } catch (e) {
       _showErrorSnackBar('解析失败: $e');
     } finally {}
@@ -202,6 +230,37 @@ class _M3u8ParserViewState extends State<M3u8ParserView> {
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
+                  // 单集/批量解析切换标签
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Watch((context) => ToggleButtons(
+                              borderRadius:
+                                  const BorderRadius.all(Radius.circular(8)),
+                              selectedBorderColor: Colors.blue,
+                              selectedColor: Colors.white,
+                              fillColor: Colors.blue,
+                              color: Colors.blue,
+                              constraints: const BoxConstraints(
+                                minHeight: 40.0,
+                                minWidth: 100.0,
+                              ),
+                              isSelected: [
+                                !widget.viewModel.isBatchMode.value,
+                                widget.viewModel.isBatchMode.value,
+                              ],
+                              onPressed: (index) {
+                                widget.viewModel.isBatchMode.value = index == 1;
+                              },
+                              children: const [
+                                Text('单集解析'),
+                                Text('批量解析'),
+                              ],
+                            )),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
                   TextField(
                     controller: _urlController,
                     decoration: const InputDecoration(
@@ -213,25 +272,132 @@ class _M3u8ParserViewState extends State<M3u8ParserView> {
                         widget.viewModel.currentUrl.value = value,
                   ),
                   const SizedBox(height: 8),
+
+                  // 批量解析时的集数输入
+                  Watch((context) => widget.viewModel.isBatchMode.value
+                      ? Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: _startEpisodeController,
+                                    decoration: const InputDecoration(
+                                      labelText: '起始集数',
+                                      hintText: '输入起始集数',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    onChanged: (value) {
+                                      final episode = int.tryParse(value);
+                                      if (episode != null) {
+                                        widget.viewModel.startEpisode.value =
+                                            episode;
+                                      }
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _endEpisodeController,
+                                    decoration: const InputDecoration(
+                                      labelText: '终止集数',
+                                      hintText: '输入终止集数',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    onChanged: (value) {
+                                      final episode = int.tryParse(value);
+                                      if (episode != null) {
+                                        widget.viewModel.endEpisode.value =
+                                            episode;
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            // 批量解析进度显示
+                            if (widget.viewModel.batchProgress.value.isNotEmpty)
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color: Colors.blue.withOpacity(0.3)),
+                                ),
+                                child: Text(
+                                  widget.viewModel.batchProgress.value,
+                                  style: const TextStyle(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(height: 8),
+                          ],
+                        )
+                      : const SizedBox.shrink()),
+
                   Row(
                     children: [
                       Expanded(
                         child: ElevatedButton.icon(
                           icon: const Icon(Icons.search),
-                          label: const Text('解析'),
+                          label: Text(widget.viewModel.isBatchMode.value
+                              ? '批量解析'
+                              : '解析'),
                           onPressed: widget.viewModel.isLoading.value
                               ? null
                               : _parseM3u8,
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      // 只在单集解析模式下显示"下一个视频"按钮
+                      Watch((context) => !widget.viewModel.isBatchMode.value
+                          ? Expanded(
+                              child: ElevatedButton.icon(
+                                icon: const Icon(Icons.skip_next),
+                                label: const Text('下一个视频'),
+                                onPressed: () {
+                                  final current =
+                                      widget.viewModel.currentUrl.value.trim();
+                                  final match = RegExp(r"(\d+)\.html$")
+                                      .firstMatch(current);
+                                  if (match == null) {
+                                    _showErrorSnackBar('网址末尾不含"数字.html"，无法前进');
+                                    return;
+                                  }
+                                  final numStr = match.group(1)!;
+                                  final currentNum = int.tryParse(numStr);
+                                  if (currentNum == null) {
+                                    _showErrorSnackBar('解析集数失败');
+                                    return;
+                                  }
+                                  final newUrl = current.replaceRange(
+                                    match.start,
+                                    match.end,
+                                    '${currentNum + 1}.html',
+                                  );
+                                  _urlController.text = newUrl;
+                                  widget.viewModel.currentUrl.value = newUrl;
+                                },
+                              ),
+                            )
+                          : const SizedBox.shrink()),
                     ],
                   ),
                 ],
               ),
             ),
 
-            // 解析结果区域
-            if (widget.viewModel.parseResults.isNotEmpty)
+            // 解析结果区域 - 只在单集解析模式下显示
+            if (widget.viewModel.parseResults.isNotEmpty &&
+                !widget.viewModel.isBatchMode.value)
               Expanded(
                 flex: 1,
                 child: Column(
@@ -267,8 +433,6 @@ class _M3u8ParserViewState extends State<M3u8ParserView> {
                                 }
                                 await widget.viewModel.controlDevice
                                     .castScreen(url);
-                                // final result = await widget.viewModel
-                                //    .crudDevice.playUrl(device, url);
                               },
                               tooltip: '投屏',
                             ),
@@ -418,6 +582,9 @@ class _M3u8ParserViewState extends State<M3u8ParserView> {
 
   @override
   void dispose() {
+    _urlController.dispose();
+    _startEpisodeController.dispose();
+    _endEpisodeController.dispose();
     super.dispose();
   }
 }

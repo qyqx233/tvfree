@@ -17,6 +17,7 @@ import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 import 'domain/model/device.dart';
 import 'domain/model/kv.dart';
 import 'domain/model/m3u8.dart';
+import 'domain/model/resource_cache.dart';
 
 export 'package:objectbox/objectbox.dart'; // so that callers only have to import this file
 
@@ -143,6 +144,69 @@ final _entities = <obx_int.ModelEntity>[
             flags: 0)
       ],
       relations: <obx_int.ModelRelation>[],
+      backlinks: <obx_int.ModelBacklink>[]),
+  obx_int.ModelEntity(
+      id: const obx_int.IdUid(4, 8284622595766908548),
+      name: 'M3u8ParseHistory',
+      lastPropertyId: const obx_int.IdUid(4, 7016223083166020926),
+      flags: 0,
+      properties: <obx_int.ModelProperty>[
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(1, 3989549064432710657),
+            name: 'id',
+            type: 6,
+            flags: 1),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(2, 8301053507214028257),
+            name: 'url',
+            type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(3, 2296064126877565282),
+            name: 'result',
+            type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(4, 7016223083166020926),
+            name: 'createdAt',
+            type: 10,
+            flags: 0)
+      ],
+      relations: <obx_int.ModelRelation>[],
+      backlinks: <obx_int.ModelBacklink>[]),
+  obx_int.ModelEntity(
+      id: const obx_int.IdUid(5, 4033060055082831206),
+      name: 'ResourceCache',
+      lastPropertyId: const obx_int.IdUid(5, 991764369463061747),
+      flags: 0,
+      properties: <obx_int.ModelProperty>[
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(1, 9160278526394386339),
+            name: 'id',
+            type: 6,
+            flags: 1),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(2, 7568210190985206034),
+            name: 'query',
+            type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(3, 9036421750005438470),
+            name: 'resultJson',
+            type: 9,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(4, 434724598880412526),
+            name: 'createdAt',
+            type: 10,
+            flags: 0),
+        obx_int.ModelProperty(
+            id: const obx_int.IdUid(5, 991764369463061747),
+            name: 'expiresAt',
+            type: 10,
+            flags: 0)
+      ],
+      relations: <obx_int.ModelRelation>[],
       backlinks: <obx_int.ModelBacklink>[])
 ];
 
@@ -181,7 +245,7 @@ Future<obx.Store> openStore(
 obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
       entities: _entities,
-      lastEntityId: const obx_int.IdUid(3, 7392285376877314639),
+      lastEntityId: const obx_int.IdUid(5, 4033060055082831206),
       lastIndexId: const obx_int.IdUid(1, 5213617542121809068),
       lastRelationId: const obx_int.IdUid(0, 0),
       lastSequenceId: const obx_int.IdUid(0, 0),
@@ -361,6 +425,100 @@ obx_int.ModelDefinition getObjectBoxModel() {
             ..id = const fb.Int64Reader().vTableGet(buffer, rootOffset, 4, 0);
 
           return object;
+        }),
+    M3u8ParseHistory: obx_int.EntityDefinition<M3u8ParseHistory>(
+        model: _entities[3],
+        toOneRelations: (M3u8ParseHistory object) => [],
+        toManyRelations: (M3u8ParseHistory object) => {},
+        getId: (M3u8ParseHistory object) => object.id,
+        setId: (M3u8ParseHistory object, int id) {
+          object.id = id;
+        },
+        objectToFB: (M3u8ParseHistory object, fb.Builder fbb) {
+          final urlOffset =
+              object.url == null ? null : fbb.writeString(object.url!);
+          final resultOffset =
+              object.result == null ? null : fbb.writeString(object.result!);
+          fbb.startTable(5);
+          fbb.addInt64(0, object.id);
+          fbb.addOffset(1, urlOffset);
+          fbb.addOffset(2, resultOffset);
+          fbb.addInt64(3, object.createdAt?.millisecondsSinceEpoch);
+          fbb.finish(fbb.endTable());
+          return object.id;
+        },
+        objectFromFB: (obx.Store store, ByteData fbData) {
+          final buffer = fb.BufferContext(fbData);
+          final rootOffset = buffer.derefObject(0);
+          final createdAtValue =
+              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 10);
+          final idParam =
+              const fb.Int64Reader().vTableGet(buffer, rootOffset, 4, 0);
+          final urlParam = const fb.StringReader(asciiOptimization: true)
+              .vTableGetNullable(buffer, rootOffset, 6);
+          final resultParam = const fb.StringReader(asciiOptimization: true)
+              .vTableGetNullable(buffer, rootOffset, 8);
+          final createdAtParam = createdAtValue == null
+              ? null
+              : DateTime.fromMillisecondsSinceEpoch(createdAtValue);
+          final object = M3u8ParseHistory(
+              id: idParam,
+              url: urlParam,
+              result: resultParam,
+              createdAt: createdAtParam);
+
+          return object;
+        }),
+    ResourceCache: obx_int.EntityDefinition<ResourceCache>(
+        model: _entities[4],
+        toOneRelations: (ResourceCache object) => [],
+        toManyRelations: (ResourceCache object) => {},
+        getId: (ResourceCache object) => object.id,
+        setId: (ResourceCache object, int id) {
+          object.id = id;
+        },
+        objectToFB: (ResourceCache object, fb.Builder fbb) {
+          final queryOffset =
+              object.query == null ? null : fbb.writeString(object.query!);
+          final resultJsonOffset = object.resultJson == null
+              ? null
+              : fbb.writeString(object.resultJson!);
+          fbb.startTable(6);
+          fbb.addInt64(0, object.id);
+          fbb.addOffset(1, queryOffset);
+          fbb.addOffset(2, resultJsonOffset);
+          fbb.addInt64(3, object.createdAt?.millisecondsSinceEpoch);
+          fbb.addInt64(4, object.expiresAt?.millisecondsSinceEpoch);
+          fbb.finish(fbb.endTable());
+          return object.id;
+        },
+        objectFromFB: (obx.Store store, ByteData fbData) {
+          final buffer = fb.BufferContext(fbData);
+          final rootOffset = buffer.derefObject(0);
+          final createdAtValue =
+              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 10);
+          final expiresAtValue =
+              const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 12);
+          final idParam =
+              const fb.Int64Reader().vTableGet(buffer, rootOffset, 4, 0);
+          final queryParam = const fb.StringReader(asciiOptimization: true)
+              .vTableGetNullable(buffer, rootOffset, 6);
+          final resultJsonParam = const fb.StringReader(asciiOptimization: true)
+              .vTableGetNullable(buffer, rootOffset, 8);
+          final createdAtParam = createdAtValue == null
+              ? null
+              : DateTime.fromMillisecondsSinceEpoch(createdAtValue);
+          final expiresAtParam = expiresAtValue == null
+              ? null
+              : DateTime.fromMillisecondsSinceEpoch(expiresAtValue);
+          final object = ResourceCache(
+              id: idParam,
+              query: queryParam,
+              resultJson: resultJsonParam,
+              createdAt: createdAtParam,
+              expiresAt: expiresAtParam);
+
+          return object;
         })
   };
 
@@ -447,4 +605,46 @@ class Kv_ {
 
   /// See [Kv.value].
   static final value = obx.QueryStringProperty<Kv>(_entities[2].properties[2]);
+}
+
+/// [M3u8ParseHistory] entity fields to define ObjectBox queries.
+class M3u8ParseHistory_ {
+  /// See [M3u8ParseHistory.id].
+  static final id =
+      obx.QueryIntegerProperty<M3u8ParseHistory>(_entities[3].properties[0]);
+
+  /// See [M3u8ParseHistory.url].
+  static final url =
+      obx.QueryStringProperty<M3u8ParseHistory>(_entities[3].properties[1]);
+
+  /// See [M3u8ParseHistory.result].
+  static final result =
+      obx.QueryStringProperty<M3u8ParseHistory>(_entities[3].properties[2]);
+
+  /// See [M3u8ParseHistory.createdAt].
+  static final createdAt =
+      obx.QueryDateProperty<M3u8ParseHistory>(_entities[3].properties[3]);
+}
+
+/// [ResourceCache] entity fields to define ObjectBox queries.
+class ResourceCache_ {
+  /// See [ResourceCache.id].
+  static final id =
+      obx.QueryIntegerProperty<ResourceCache>(_entities[4].properties[0]);
+
+  /// See [ResourceCache.query].
+  static final query =
+      obx.QueryStringProperty<ResourceCache>(_entities[4].properties[1]);
+
+  /// See [ResourceCache.resultJson].
+  static final resultJson =
+      obx.QueryStringProperty<ResourceCache>(_entities[4].properties[2]);
+
+  /// See [ResourceCache.createdAt].
+  static final createdAt =
+      obx.QueryDateProperty<ResourceCache>(_entities[4].properties[3]);
+
+  /// See [ResourceCache.expiresAt].
+  static final expiresAt =
+      obx.QueryDateProperty<ResourceCache>(_entities[4].properties[4]);
 }
