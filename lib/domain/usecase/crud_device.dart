@@ -4,6 +4,7 @@ import 'package:tvfree/domain/repository/upnps.dart';
 
 class CrudDevice {
   final UpnpRepository _upnpRepo;
+  // ignore: unused_field
   final KvRepository _kvRepo;
 
   CrudDevice(this._upnpRepo, this._kvRepo);

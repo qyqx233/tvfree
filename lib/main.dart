@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:tvfree/data/repository/kv.dart';
-import 'package:tvfree/data/repository/m3u8_parser_impl.dart';
+import 'package:tvfree/domain/repository/kvs.dart';
+import 'package:tvfree/domain/repository/m3u8s.dart';
+import 'package:tvfree/domain/repository/upnps.dart';
 import 'package:tvfree/objectbox.g.dart';
-
-import 'data/repository/upnp_impl.dart';
+import 'package:tvfree/di.dart';
 import 'presentation/app.dart';
 
 void main() async {
@@ -13,10 +13,11 @@ void main() async {
   // final db = Database('${dir.path}/todos.db');
   // final todosRepository = UpnpRepositoryImpl(db);
   final appDir = await getApplicationDocumentsDirectory();
-  final store = await openStore(directory: '${appDir.path}/objectbox');
+  setStore(await openStore(directory: '${appDir.path}/objectbox'));
+  await configureDependencies();
   runApp(TvFreeApp(
-    upnpsRepository: UpnpRepositoryImpl(store),
-    m3u8parserRepository: M3u8ParserRepositoryImpl(store),
-    kvRepository: KvRepositoryImpl(store),
+    upnpsRepository: getIt<UpnpRepository>(),
+    m3u8parserRepository: getIt<M3u8ParserRepository>(),
+    kvRepository: getIt<KvRepository>(),
   ));
 }

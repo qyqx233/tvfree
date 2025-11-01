@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:signals/signals_flutter.dart';
+import 'package:tvfree/domain/signals/signals.dart';
 import 'package:tvfree/presentation/viewmodel/resource.dart';
+import 'package:tvfree/data/repository/restful.dart';
 
 class ResourceView extends StatefulWidget {
   const ResourceView({super.key, required this.viewModel});
@@ -20,7 +22,7 @@ class _ResourceViewState extends State<ResourceView>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     // 初始化时加载存储信息
-    widget.viewModel.getStorageInfo('.');
+    if (remoteStorageUrl.value.isNotEmpty) widget.viewModel.getStorageInfo('.');
   }
 
   @override
@@ -46,7 +48,7 @@ class _ResourceViewState extends State<ResourceView>
         controller: _tabController,
         children: [
           RemoteResourceView(viewModel: widget.viewModel),
-          StorageResourceView(viewModel: widget.viewModel),
+          LocalStorageView(viewModel: widget.viewModel),
         ],
       ),
     );
@@ -68,10 +70,6 @@ class _RemoteResourceViewState extends State<RemoteResourceView>
 
   Future<void> _searchTv() async {
     await widget.viewModel.searchTv(searchText.value);
-  }
-
-  Future<void> _parseM3U8(String m3u8Url) async {
-    await widget.viewModel.parseM3U8(m3u8Url);
   }
 
   Widget _buildSearchSection() {
@@ -217,17 +215,16 @@ class _RemoteResourceViewState extends State<RemoteResourceView>
   }
 }
 
-class StorageResourceView extends StatefulWidget {
-  const StorageResourceView({super.key, required this.viewModel});
+class LocalStorageView extends StatefulWidget {
+  const LocalStorageView({super.key, required this.viewModel});
 
   final ResourceVM viewModel;
 
   @override
-  State<StorageResourceView> createState() => _StorageResourceViewState();
+  State<LocalStorageView> createState() => _LocalStorageViewState();
 }
 
-class _StorageResourceViewState extends State<StorageResourceView>
-    with SignalsMixin {
+class _LocalStorageViewState extends State<LocalStorageView> with SignalsMixin {
   // 检查是否为视频文件
   bool _isVideoFile(String fileName) {
     final videoExtensions = [
@@ -303,14 +300,17 @@ class _StorageResourceViewState extends State<StorageResourceView>
       final storageInfo = widget.viewModel.storageInfo.value;
       if (storageInfo == null) return const SizedBox.shrink();
 
-      if (storageInfo.err.isNotEmpty) {
-        return Center(
-          child: Text('错误: ${storageInfo.err}'),
-        );
-      }
+      // 分离目录和文件
+      final dirs = <CaddyFileInfo>[];
+      final files = <CaddyFileInfo>[];
 
-      final dirs = storageInfo.dirs ?? [];
-      final files = storageInfo.files ?? [];
+      for (final item in storageInfo) {
+        if (item.is_dir) {
+          dirs.add(item);
+        } else {
+          files.add(item);
+        }
+      }
 
       if (dirs.isEmpty && files.isEmpty) {
         return const Center(
@@ -323,32 +323,35 @@ class _StorageResourceViewState extends State<StorageResourceView>
         itemBuilder: (context, index) {
           if (index < dirs.length) {
             // 目录项
-            final dirName = dirs[index];
+            final dirInfo = dirs[index];
             return ListTile(
               leading: const Icon(Icons.folder, color: Colors.blue),
-              title: Text(dirName),
-              onTap: () => widget.viewModel.enterDirectory(dirName),
+              title: Text(dirInfo.name),
+              onTap: () => widget.viewModel.enterDirectory(dirInfo.name),
               trailing: const Icon(Icons.arrow_forward_ios),
             );
           } else {
             // 文件项
-            final fileName = files[index - dirs.length];
-            final isVideoFile = _isVideoFile(fileName);
+            final fileInfo = files[index - dirs.length];
+            final isVideoFile = _isVideoFile(fileInfo.name);
             final filePath = widget.viewModel.currentPath.value == '.'
-                ? fileName
-                : '${widget.viewModel.currentPath.value}/$fileName';
+                ? fileInfo.name
+                : '${widget.viewModel.currentPath.value}/${fileInfo.name}';
 
             return ListTile(
               leading: Icon(
                 isVideoFile ? Icons.video_file : Icons.insert_drive_file,
                 color: isVideoFile ? Colors.red : Colors.grey,
               ),
-              title: Text(fileName),
+              title: Text(fileInfo.name),
+              subtitle: Text(
+                  '${_formatFileSize(fileInfo.size)} • ${_formatDate(fileInfo.mod_time)}'),
               trailing: isVideoFile
                   ? IconButton(
                       icon: const Icon(Icons.cast),
                       onPressed: () async {
-                        debugPrint('投屏: $filePath');
+                        final castUrl = "${remoteStorageUrl.value}/$filePath";
+                        debugPrint('投屏文件: $castUrl');
                         final device = await widget.viewModel.crudDevice
                             .getConnectedDevice();
                         if (device == null) {
@@ -357,7 +360,7 @@ class _StorageResourceViewState extends State<StorageResourceView>
                           return;
                         }
                         await widget.viewModel.controlDevice
-                            .castScreen(filePath);
+                            .castScreen(castUrl);
                       },
                       tooltip: '投屏',
                     )
@@ -365,11 +368,11 @@ class _StorageResourceViewState extends State<StorageResourceView>
               onTap: () {
                 if (isVideoFile) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('视频文件: $fileName')),
+                    SnackBar(content: Text('视频文件: ${fileInfo.name}')),
                   );
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('选中文件: $fileName')),
+                    SnackBar(content: Text('选中文件: ${fileInfo.name}')),
                   );
                 }
               },
@@ -378,6 +381,25 @@ class _StorageResourceViewState extends State<StorageResourceView>
         },
       );
     });
+  }
+
+  // 格式化文件大小
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024)
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  }
+
+  // 格式化日期
+  String _formatDate(String isoDate) {
+    try {
+      final date = DateTime.parse(isoDate);
+      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return isoDate;
+    }
   }
 
   @override

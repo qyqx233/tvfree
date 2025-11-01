@@ -85,6 +85,9 @@ FileInfoResponse _$FileInfoResponseFromJson(Map<String, dynamic> json) =>
       dirs: (json['dirs'] as List<dynamic>?)?.map((e) => e as String).toList(),
       files:
           (json['files'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      caddyFiles: (json['caddyFiles'] as List<dynamic>?)
+          ?.map((e) => CaddyFileInfo.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
 
 Map<String, dynamic> _$FileInfoResponseToJson(FileInfoResponse instance) =>
@@ -93,6 +96,29 @@ Map<String, dynamic> _$FileInfoResponseToJson(FileInfoResponse instance) =>
       'md5': instance.md5,
       'dirs': instance.dirs,
       'files': instance.files,
+      'caddyFiles': instance.caddyFiles,
+    };
+
+CaddyFileInfo _$CaddyFileInfoFromJson(Map<String, dynamic> json) =>
+    CaddyFileInfo(
+      name: json['name'] as String,
+      size: (json['size'] as num).toInt(),
+      url: json['url'] as String,
+      mod_time: json['mod_time'] as String,
+      mode: (json['mode'] as num).toInt(),
+      is_dir: json['is_dir'] as bool,
+      is_symlink: json['is_symlink'] as bool,
+    );
+
+Map<String, dynamic> _$CaddyFileInfoToJson(CaddyFileInfo instance) =>
+    <String, dynamic>{
+      'name': instance.name,
+      'size': instance.size,
+      'url': instance.url,
+      'mod_time': instance.mod_time,
+      'mode': instance.mode,
+      'is_dir': instance.is_dir,
+      'is_symlink': instance.is_symlink,
     };
 
 // **************************************************************************
@@ -223,7 +249,7 @@ class _StorageApiService implements StorageApiService {
     this.baseUrl,
     this.errorLogger,
   }) {
-    baseUrl ??= 'http://localhost:9999';
+    baseUrl ??= 'http://localhost:8070';
   }
 
   final Dio _dio;
@@ -233,25 +259,19 @@ class _StorageApiService implements StorageApiService {
   final ParseErrorLogger? errorLogger;
 
   @override
-  Future<FileInfoResponse> getFileInfo(
-    String path,
-    int isMedia,
-  ) async {
+  Future<List<CaddyFileInfo>> getFileInfo(String path) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{
-      r'q': path,
-      r'isMedia': isMedia,
-    };
+    final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<FileInfoResponse>(Options(
+    final _options = _setStreamType<List<CaddyFileInfo>>(Options(
       method: 'GET',
       headers: _headers,
       extra: _extra,
     )
         .compose(
           _dio.options,
-          '/fileinfo',
+          '${path}',
           queryParameters: queryParameters,
           data: _data,
         )
@@ -260,10 +280,12 @@ class _StorageApiService implements StorageApiService {
           _dio.options.baseUrl,
           baseUrl,
         )));
-    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late FileInfoResponse _value;
+    final _result = await _dio.fetch<List<dynamic>>(_options);
+    late List<CaddyFileInfo> _value;
     try {
-      _value = FileInfoResponse.fromJson(_result.data!);
+      _value = _result.data!
+          .map((dynamic i) => CaddyFileInfo.fromJson(i as Map<String, dynamic>))
+          .toList();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options);
       rethrow;

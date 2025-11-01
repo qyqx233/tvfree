@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:signals/signals_flutter.dart';
 import 'package:tvfree/domain/model/device.dart';
-import 'package:tvfree/domain/signals/signal.dart';
+import 'package:tvfree/domain/signals/signals.dart';
 import 'package:tvfree/domain/usecase/control_device.dart';
 import 'package:tvfree/presentation/viewmodel/device_list.dart';
 import 'package:tvfree/presentation/views/addr_choice.dart';

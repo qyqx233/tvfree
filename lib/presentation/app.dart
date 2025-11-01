@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart'; // 引入 go_router
-import 'package:tvfree/data/repository/kv.dart';
+import 'package:tvfree/di.dart';
+import 'package:tvfree/domain/repository/kvs.dart';
 import 'package:tvfree/domain/repository/m3u8s.dart';
 import 'package:tvfree/domain/repository/upnps.dart';
 import 'package:tvfree/domain/usecase/control_device.dart';
@@ -25,13 +26,12 @@ class TvFreeApp extends StatelessWidget {
 
   final UpnpRepository upnpsRepository;
   final M3u8ParserRepository m3u8parserRepository;
-  final KvRepositoryImpl kvRepository;
+  final KvRepository kvRepository;
 
   @override
   Widget build(BuildContext context) {
-    final controlDevice = ControlDevice(upnpsRepository);
-    var _ =
-        ResourceVM(CrudDevice(upnpsRepository, kvRepository), controlDevice);
+    var _ = ResourceVM(getIt<CrudDevice>(), getIt<ControlDevice>());
+    final m3u8ParserService = M3u8ParserService(m3u8parserRepository);
     final router = GoRouter(
       initialLocation: '/upnp',
       routes: [
@@ -79,34 +79,40 @@ class TvFreeApp extends StatelessWidget {
               path: '/upnp',
               builder: (context, state) => DeviceListView(
                 viewModel: DeviceListVM(
-                  crudDevice: CrudDevice(upnpsRepository, kvRepository),
-                  controlDevice: controlDevice,
+                  crudDevice: getIt<CrudDevice>(),
+                  controlDevice: getIt<ControlDevice>(),
                 ),
               ),
             ),
             GoRoute(
                 path: '/parser',
-                builder: (context, state) => M3u8ParserView(
-                      viewModel: M3u8ParserVM(
-                        M3u8ParserService(m3u8parserRepository),
-                        CrudDevice(upnpsRepository, kvRepository),
-                        controlDevice,
-                      ),
-                    )),
+                builder: (context, state) {
+                  final m3u8ParserService =
+                      M3u8ParserService(m3u8parserRepository);
+                  return M3u8ParserView(
+                    viewModel: M3u8ParserVM(
+                      m3u8ParserService,
+                      getIt<CrudDevice>(),
+                      getIt<ControlDevice>(),
+                    ),
+                  );
+                }),
             GoRoute(
               path: '/remote',
               builder: (context, state) => ResourceView(
                 viewModel: ResourceVM(
-                  CrudDevice(upnpsRepository, kvRepository),
-                  controlDevice,
+                  getIt<CrudDevice>(),
+                  getIt<ControlDevice>(),
                 ),
               ),
             ),
             GoRoute(
-              path: "/settings",
-              builder: (context, state) =>
-                  SettingsView(viewModel: SettingsVM(kvRepository)),
-            )
+                path: "/settings",
+                builder: (context, state) {
+                  return SettingsView(
+                    viewModel: SettingsVM(kvRepository, m3u8ParserService),
+                  );
+                })
           ],
         ),
       ],

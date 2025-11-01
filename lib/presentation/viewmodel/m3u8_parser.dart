@@ -11,20 +11,18 @@ import 'package:tvfree/domain/usecase/m3u8_parser.dart';
 class M3u8ParserVM {
   // 单例实例
   static M3u8ParserVM? _instance;
-  final sc = StreamController<List<M3u8Parser>>.broadcast();
   final M3u8ParserService _m3u8ParserService;
   final CrudDevice crudDevice;
   final ControlDevice controlDevice;
-  final parsers = listSignal<M3u8Parser>([]);
-  late final _connectParsers = connect(parsers);
-  late final FlutterComputed<M3u8Parser?> activeParser;
   final isLoading = signal<bool>(false);
-  final currentUrl = signal<String>('');
   final parseResults = listSignal<String>([]);
   final isBatchMode = signal<bool>(false);
   final startEpisode = signal<int>(1);
   final endEpisode = signal<int>(1);
   final batchProgress = signal<String>('');
+  final currentUrl = signal<String>('');
+  M3u8Parser? _activeParser;
+  StreamSubscription<List<M3u8Parser>>? _parserSubscription;
 
   // API 服务实例
 
@@ -38,39 +36,51 @@ class M3u8ParserVM {
   // 私有构造函数
   M3u8ParserVM._internal(
       this._m3u8ParserService, this.crudDevice, this.controlDevice) {
-    _connectParsers << sc.stream;
-    activeParser = computed(() {
-      try {
-        return parsers.firstWhere((parser) => parser.isActive);
-      } catch (e) {
-        return null;
+    // 初始化活跃解析器
+    _loadActiveParser();
+    // 监听解析器变化
+    _setupParserWatcher();
+  }
+
+  Future<void> _loadActiveParser() async {
+    try {
+      final allParsers = await _m3u8ParserService.getAll();
+      if (allParsers.isNotEmpty) {
+        _activeParser = allParsers.firstWhere(
+          (parser) => parser.isActive,
+          orElse: () => allParsers.first,
+        );
+      } else {
+        _activeParser = null;
       }
-    });
-    getAll().then((parsers_) {
-      parsers.value = parsers_;
-    });
+    } catch (e) {
+      _activeParser = null;
+    }
   }
 
   // 模拟数据存储
 
   Future<List<String>> parseM3u8(String url) async {
     // 如果有活跃的解析器，使用它的端点进行解析
-    if (activeParser.value == null) {
+    if (_activeParser == null) {
       throw Exception('没有活跃的解析器');
     }
 
     try {
       isLoading.value = true;
       parseResults.value = [];
-      final parser = activeParser.value!;
+      final parser = _activeParser!;
       final Map<String, dynamic> requestBody = {
         'url': url,
       };
       if (parser.sk != null && parser.sk!.isNotEmpty) {
         requestBody['sk'] = parser.sk;
       }
+      if (kDebugMode) {
+        debugPrint('使用解析器: ${parser.url}, 请求体: $requestBody');
+      }
       final response = await gApiServiceMng
-          .getApiService(activeParser.value!.url!)
+          .getApiService(_activeParser!.url!)
           .parseM3U8(requestBody);
       if (response.code != 200) {
         throw Exception('解析失败: ${response.msg}');
@@ -96,7 +106,7 @@ class M3u8ParserVM {
   // 批量解析方法
   Future<void> batchParseM3u8(
       String baseUrl, int startEpisode, int endEpisode) async {
-    if (activeParser.value == null) {
+    if (_activeParser == null) {
       throw Exception('没有活跃的解析器');
     }
 
@@ -109,13 +119,13 @@ class M3u8ParserVM {
       parseResults.value = []; // 批量解析不展示结果，清空之前的结果
       batchProgress.value = '准备批量解析...';
 
-      final parser = activeParser.value!;
+      final parser = _activeParser!;
       int successCount = 0;
       int failCount = 0;
       try {
         // 构建当前集数的URL
         final Map<String, dynamic> requestBody = {
-          'url': currentUrl,
+          'url': baseUrl,
           'start': startEpisode,
           'end': endEpisode,
         };
@@ -177,77 +187,33 @@ class M3u8ParserVM {
     }
   }
 
-  // 根据基础URL和集数构建完整的URL
-  String _buildEpisodeUrl(String baseUrl, int episode) {
-    // 尝试从基础URL中提取模式
-    final match = RegExp(r"(\d+)\.html$").firstMatch(baseUrl);
-    if (match != null) {
-      // 如果基础URL已经包含集数，则替换集数
-      return baseUrl.replaceRange(
-        match.start,
-        match.end,
-        '$episode.html',
-      );
-    } else {
-      // 如果基础URL不包含集数，则在末尾添加集数
-      if (baseUrl.endsWith('/')) {
-        return '$baseUrl$episode.html';
-      } else {
-        return '$baseUrl/$episode.html';
-      }
-    }
-  }
-
-  Future<void> refresh() async {
-    sc.sink.add(await getAll());
-  }
-
-  Future<void> addM3u8Parser(M3u8Parser parser) async {
-    try {
-      await _m3u8ParserService.add(parser);
-      await refresh();
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('添加解析器失败: $e');
-      }
-      rethrow;
-    }
-  }
-
-  Future<void> removeM3u8Parser(M3u8Parser parser) async {
-    try {
-      await _m3u8ParserService.remove(parser);
-      await refresh();
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('删除解析器失败: $e');
-      }
-      rethrow;
-    }
-  }
-
-  Future<void> updateM3u8Parser(M3u8Parser parser) async {
-    try {
-      await _m3u8ParserService.update(parser);
-      await refresh();
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('更新解析器失败: $e');
-      }
-      rethrow;
-    }
-  }
-
-  Future<List<M3u8Parser>> getAll() async {
-    // 模拟从数据库加载
-    return _m3u8ParserService.getAll();
-  }
-
   // 获取当前活跃的解析器
-  // M3u8Parser? get activeParser => activeParser.value;
+  M3u8Parser? get activeParser => _activeParser;
+
+  // 刷新活跃解析器
+  Future<void> refreshActiveParser() async {
+    await _loadActiveParser();
+  }
+
+  // 设置解析器监听
+  void _setupParserWatcher() {
+    _parserSubscription = _m3u8ParserService.watchAll().listen((parsers) {
+      // 当解析器列表发生变化时，重新加载活跃解析器
+      if (kDebugMode) {
+        debugPrint('解析器列表发生变化，重新加载活跃解析器');
+      }
+      _loadActiveParser();
+    });
+  }
 
   // 重置单例实例的方法（主要用于测试）
   static void reset() {
+    _instance?._parserSubscription?.cancel();
     _instance = null;
+  }
+
+  // 销毁资源
+  void dispose() {
+    _parserSubscription?.cancel();
   }
 }

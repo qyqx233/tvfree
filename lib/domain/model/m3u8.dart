@@ -1,7 +1,7 @@
 import 'package:objectbox/objectbox.dart';
 
 @Entity()
-class M3u8ParseHistory  {
+class M3u8ParseHistory {
   @Id()
   int id = 0;
   String? url;
@@ -75,13 +75,15 @@ class M3u8Parser {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is M3u8Parser && 
-           other.url == url && 
-           other.name == name;
+    return other is M3u8Parser &&
+        other.url == url &&
+        other.name == name &&
+        other.sk == sk &&
+        other.isActive == isActive;
   }
 
   @override
-  int get hashCode => Object.hash(url, name);
+  int get hashCode => Object.hash(url, name, sk, isActive);
 
   M3u8Parser copyWith({
     String? name,

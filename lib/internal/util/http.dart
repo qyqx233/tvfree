@@ -1,10 +1,9 @@
-import 'package:dio/dio.dart';
+import 'package:tvfree/internal/util/dio_helper.dart';
 
 class Http {
   static Future<String?> fetchString(String url) async {
-    final dio = Dio();
     try {
-      final response = await dio.get(url);
+      final response = await DioClient.instance.dio.get(url);
       return response.data as String?;
     } catch (e) {
       return null;

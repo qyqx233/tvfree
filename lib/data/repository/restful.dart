@@ -1,7 +1,10 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'package:dio/dio.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:retrofit/retrofit.dart';
 import 'package:tvfree/internal/util/stream.dart';
+import 'package:tvfree/internal/util/dio_helper.dart';
 
 part 'restful.g.dart';
 
@@ -93,12 +96,14 @@ class FileInfoResponse {
   final String md5;
   final List<String>? dirs;
   final List<String>? files;
+  final List<CaddyFileInfo>? caddyFiles;
 
   FileInfoResponse({
     required this.err,
     required this.md5,
     this.dirs,
     this.files,
+    this.caddyFiles,
   });
 
   // JSON 序列化和反序列化方法
@@ -106,6 +111,34 @@ class FileInfoResponse {
       _$FileInfoResponseFromJson(json);
 
   Map<String, dynamic> toJson() => _$FileInfoResponseToJson(this);
+}
+
+// 定义 CaddyFileInfo 类以匹配Caddy Server响应格式
+@JsonSerializable()
+class CaddyFileInfo {
+  final String name;
+  final int size;
+  final String url;
+  final String mod_time;
+  final int mode;
+  final bool is_dir;
+  final bool is_symlink;
+
+  CaddyFileInfo({
+    required this.name,
+    required this.size,
+    required this.url,
+    required this.mod_time,
+    required this.mode,
+    required this.is_dir,
+    required this.is_symlink,
+  });
+
+  // JSON 序列化和反序列化方法
+  factory CaddyFileInfo.fromJson(Map<String, dynamic> json) =>
+      _$CaddyFileInfoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$CaddyFileInfoToJson(this);
 }
 
 @RestApi(baseUrl: "http://api.com/api/v1")
@@ -123,18 +156,15 @@ abstract class ApiService {
   );
 }
 
-@RestApi(baseUrl: "http://localhost:9999")
+@RestApi(baseUrl: "http://localhost:8070")
 abstract class StorageApiService {
   factory StorageApiService(Dio dio, {String? baseUrl}) = _StorageApiService;
 
-  @GET('/fileinfo')
-  Future<FileInfoResponse> getFileInfo(
-    @Query('q') String path,
-    @Query('isMedia') int isMedia,
+  @GET('{path}')
+  Future<List<CaddyFileInfo>> getFileInfo(
+    @Path() String path,
   );
 }
-
-final Dio gDio = Dio();
 
 class ApiServiceMng {
   final Map<String, ApiService> _apiServiceMap = {};
@@ -145,7 +175,7 @@ class ApiServiceMng {
     if (_apiServiceMap.containsKey(baseURL)) {
       return _apiServiceMap[baseURL]!;
     }
-    apiService = ApiService(gDio, baseUrl: baseURL);
+    apiService = ApiService(DioClient.instance.dio, baseUrl: baseURL);
     synchronized(() {
       _apiServiceMap[baseURL] = apiService!;
     });
@@ -157,7 +187,13 @@ class ApiServiceMng {
     if (_storageApiServiceMap.containsKey(baseURL)) {
       return _storageApiServiceMap[baseURL]!;
     }
-    storageApiService = StorageApiService(gDio, baseUrl: baseURL);
+
+    // 创建一个自定义的Dio实例，添加Accept头
+    // final dio = Dio();
+    // dio.options.headers['Accept'] = 'application/json';
+
+    storageApiService =
+        StorageApiService(DioClient.instance.dio, baseUrl: baseURL);
     synchronized(() {
       _storageApiServiceMap[baseURL] = storageApiService!;
     });

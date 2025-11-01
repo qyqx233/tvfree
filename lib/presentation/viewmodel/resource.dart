@@ -5,7 +5,7 @@ import 'package:signals/signals_flutter.dart';
 import 'package:tvfree/data/repository/restful.dart';
 import 'package:tvfree/domain/usecase/control_device.dart';
 import 'package:tvfree/domain/usecase/crud_device.dart';
-import 'package:tvfree/domain/signals/signal.dart';
+import 'package:tvfree/domain/signals/signals.dart';
 
 // “剧集-渠道”视图模型结构
 class ChannelOption {
@@ -49,9 +49,9 @@ class ResourceVM {
 
   // 存储相关状态
   final storageLoading = signal<bool>(false);
-  final storageInfo = signal<FileInfoResponse?>(null);
-  final currentPath = signal<String>('.');
-  final pathHistory = listSignal<String>(['.']);
+  final storageInfo = signal<List<CaddyFileInfo>?>(null);
+  final currentPath = signal<String>('');
+  final pathHistory = listSignal<String>(['']);
   final CrudDevice crudDevice;
   final ControlDevice controlDevice;
 
@@ -131,10 +131,12 @@ class ResourceVM {
   // 获取存储信息
   Future<void> getStorageInfo(String path, {int isMedia = 1}) async {
     storageLoading.value = true;
+    if (kDebugMode) {}
     try {
       final storageService =
-          gApiServiceMng.getStorageApiService('http://localhost:9999');
-      final result = await storageService.getFileInfo(path, isMedia);
+          gApiServiceMng.getStorageApiService(remoteStorageUrl.value);
+      final requestPath = "/$path";
+      final result = await storageService.getFileInfo(requestPath);
       storageInfo.value = result;
       currentPath.value = path;
     } catch (e) {

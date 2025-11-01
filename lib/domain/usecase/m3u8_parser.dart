@@ -27,4 +27,8 @@ class M3u8ParserService {
   Future<int> add(M3u8Parser parser) async {
     return await _repo.add(parser);
   }
+
+  Stream<List<M3u8Parser>> watchAll() {
+    return _repo.watchAll();
+  }
 }
