@@ -70,7 +70,8 @@ class ResourceVM {
 
     isLoading.value = true;
     try {
-      final apiService = gApiServiceMng.getApiService(remoteStorageUrl.value);
+      final apiService =
+          gApiServiceMng.getApiService(parseM3U8EndpointSignal.value);
       final result = await apiService.searchTv({'name': query});
       searchResults.value = result;
     } catch (e) {
@@ -107,7 +108,7 @@ class ResourceVM {
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('解析失败: $e');
+        debugPrint('解析失败json: $e');
       }
       rethrow;
     } finally {

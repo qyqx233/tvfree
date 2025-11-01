@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:tvfree/data/repository/restful.dart';
 import 'package:tvfree/domain/model/resource_cache.dart';
 import 'package:tvfree/domain/repository/resource.dart';
+import 'package:tvfree/domain/signals/signals.dart';
 import 'package:tvfree/objectbox.g.dart';
 
 class ResourceRepositoryImpl implements ResourceRepository {
@@ -14,11 +16,27 @@ class ResourceRepositoryImpl implements ResourceRepository {
   @override
   Future<TvSearchRs> searchTv(String name) async {
     try {
-      final apiService = gApiServiceMng.getApiService(apiBaseUrl);
+      debugPrint("endpoint=${parseM3U8EndpointSignal.value}");
+      final apiService =
+          gApiServiceMng.getApiService(parseM3U8EndpointSignal.value);
       final result = await apiService.searchTv({'name': name});
 
+      // 打印返回值用于调试
+      // debugPrint('=== searchTv API Response ===');
+      // debugPrint('Search query: $name');
+      // debugPrint('Response code: ${result.code}');
+      // debugPrint('Response message: ${result.msg}');
+      // debugPrint('Response data keys: ${result.data.keys.toList()}');
+      // result.data.forEach((key, value) {
+      //   debugPrint('Data for key $key: ${value.length} items');
+      //   if (value.isNotEmpty) {
+      //     debugPrint('First item: ${value.first}');
+      //   }
+      // });
+      // debugPrint('=== End of API Response ===');
+
       // 缓存搜索结果
-      await cacheSearchResult(name, result);
+      // await cacheSearchResult(name, result);
 
       return result;
     } catch (e) {

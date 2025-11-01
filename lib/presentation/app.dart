@@ -1,9 +1,14 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart'; // 引入 go_router
 import 'package:tvfree/di.dart';
+import 'package:tvfree/domain/model/m3u8.dart';
 import 'package:tvfree/domain/repository/kvs.dart';
 import 'package:tvfree/domain/repository/m3u8s.dart';
 import 'package:tvfree/domain/repository/upnps.dart';
+import 'package:tvfree/domain/signals/signals.dart';
 import 'package:tvfree/domain/usecase/control_device.dart';
 import 'package:tvfree/domain/usecase/crud_device.dart';
 import 'package:tvfree/domain/usecase/m3u8_parser.dart';
@@ -16,7 +21,7 @@ import 'package:tvfree/presentation/views/m3u8_parser.dart'; // 导入M3u8Parser
 import 'package:tvfree/presentation/views/resource.dart';
 import 'package:tvfree/presentation/views/settings.dart';
 
-class TvFreeApp extends StatelessWidget {
+class TvFreeApp extends StatefulWidget {
   const TvFreeApp({
     super.key,
     required this.upnpsRepository,
@@ -29,9 +34,69 @@ class TvFreeApp extends StatelessWidget {
   final KvRepository kvRepository;
 
   @override
+  State<TvFreeApp> createState() => _TvFreeAppState();
+}
+
+class _TvFreeAppState extends State<TvFreeApp> {
+  late final M3u8ParserService _m3u8ParserService;
+  StreamSubscription<List<M3u8Parser>>? _parserSubscription;
+  M3u8Parser? _activeParser;
+
+  @override
+  void initState() {
+    super.initState();
+    _m3u8ParserService = M3u8ParserService(widget.m3u8parserRepository);
+    _loadActiveParser();
+    _setupParserWatcher();
+  }
+
+  Future<void> _loadActiveParser() async {
+    try {
+      final allParsers = await _m3u8ParserService.getAll();
+      if (allParsers.isNotEmpty) {
+        _activeParser = allParsers.firstWhere(
+          (parser) => parser.isActive,
+          orElse: () => allParsers.first,
+        );
+      } else {
+        _activeParser = null;
+      }
+      _updateParserSignals();
+    } catch (e) {
+      _activeParser = null;
+      _updateParserSignals();
+    }
+  }
+
+  void _updateParserSignals() {
+    if (_activeParser != null) {
+      parseM3U8EndpointSignal.value = _activeParser!.url ?? '';
+      m3u8SkSignal.value = _activeParser!.sk;
+    } else {
+      parseM3U8EndpointSignal.value = '';
+      m3u8SkSignal.value = null;
+    }
+  }
+
+  void _setupParserWatcher() {
+    _parserSubscription = _m3u8ParserService.watchAll().listen((parsers) {
+      // 当解析器列表发生变化时，重新加载活跃解析器
+      if (kDebugMode) {
+        debugPrint('解析器列表发生变化，重新加载活跃解析器');
+      }
+      _loadActiveParser();
+    });
+  }
+
+  @override
+  void dispose() {
+    _parserSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     var _ = ResourceVM(getIt<CrudDevice>(), getIt<ControlDevice>());
-    final m3u8ParserService = M3u8ParserService(m3u8parserRepository);
     final router = GoRouter(
       initialLocation: '/upnp',
       routes: [
@@ -87,11 +152,8 @@ class TvFreeApp extends StatelessWidget {
             GoRoute(
                 path: '/parser',
                 builder: (context, state) {
-                  final m3u8ParserService =
-                      M3u8ParserService(m3u8parserRepository);
                   return M3u8ParserView(
                     viewModel: M3u8ParserVM(
-                      m3u8ParserService,
                       getIt<CrudDevice>(),
                       getIt<ControlDevice>(),
                     ),
@@ -110,7 +172,8 @@ class TvFreeApp extends StatelessWidget {
                 path: "/settings",
                 builder: (context, state) {
                   return SettingsView(
-                    viewModel: SettingsVM(kvRepository, m3u8ParserService),
+                    viewModel:
+                        SettingsVM(widget.kvRepository, _m3u8ParserService),
                   );
                 })
           ],

@@ -58,7 +58,7 @@ class ParseM3u8Rs {
 class TvSearchRs {
   final int code;
   final String msg;
-  final Map<String, Map<String, List<TvSearchData>>> data;
+  final Map<String, List<TvSearchData>> data;
 
   TvSearchRs({
     required this.code,
@@ -76,9 +76,11 @@ class TvSearchRs {
 // 定义 TvSearchData 类
 @JsonSerializable()
 class TvSearchData {
+  final String channel;
   final String m3u8;
 
   TvSearchData({
+    required this.channel,
     required this.m3u8,
   });
 

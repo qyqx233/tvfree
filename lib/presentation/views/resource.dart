@@ -111,81 +111,60 @@ class _RemoteResourceViewState extends State<RemoteResourceView>
       final results = widget.viewModel.searchResults.value;
       if (results == null) return const SizedBox.shrink();
 
-      if (results.code != 0) {
+      if (results.code != 200) {
         return Text('解析失败: ${results.msg}');
       }
-      debugPrint("============ ${results.data.length}");
 
-      // 转换数据结构：按集数分组，每集对应多个播放渠道
-      final Map<String, List<Map<String, dynamic>>> episodesMap = {};
-
-      // Iterate through all source categories
-      results.data.forEach((source, episodesBySource) {
-        // Iterate through episodes in each source
-        episodesBySource.forEach((episode, episodeDataList) {
-          // Create a key for this episode
-          final episodeKey = episode;
-
-          if (!episodesMap.containsKey(episodeKey)) {
-            episodesMap[episodeKey] = [];
-          }
-
-          // Add all data for this episode from the current source
-          for (final episodeData in episodeDataList) {
-            episodesMap[episodeKey]!.add({
-              'source': source.toString(),
-              'episode': episode,
-              'data': episodeData,
-            });
-          }
-        });
-      });
-
+      // 新的数据结构：按集数分组，每集对应多个播放渠道
       return Expanded(
         child: ListView(
-          children: episodesMap.entries.map((episodeEntry) {
+          children: results.data.entries.map((episodeEntry) {
             final episode = episodeEntry.key;
             final channels = episodeEntry.value;
 
-            return ExpansionTile(
-              title: Text('第$episode集'),
-              children: channels.map((channelInfo) {
-                final source = channelInfo['source'];
-                final episode = channelInfo['episode'];
-                final data = channelInfo['data'];
-
-                return ListTile(
-                  title: Text('来源: $source'),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('集数: 第$episode集'),
-                      Text('M3U8: ${data.m3u8}'),
-                    ],
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.cast),
-                    onPressed: () async {
-                      debugPrint('投屏: ${data.m3u8}');
-                      final device = await widget.viewModel.crudDevice
-                          .getConnectedDevice();
-                      if (device == null) {
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('未连接设备')),
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '第$episode集',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8.0,
+                      runSpacing: 4.0,
+                      children: channels.map((channelData) {
+                        return ActionChip(
+                          label: Text(channelData.channel),
+                          onPressed: () async {
+                            debugPrint('播放: ${channelData.m3u8}');
+                            final device = await widget.viewModel.crudDevice
+                                .getConnectedDevice();
+                            if (device == null) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('未连接设备')),
+                              );
+                              return;
+                            }
+                            await widget.viewModel.controlDevice
+                                .castScreen(channelData.m3u8);
+                          },
+                          backgroundColor: Colors.blue.shade50,
+                          side: BorderSide(color: Colors.blue.shade200),
                         );
-                        return;
-                      }
-                      await widget.viewModel.controlDevice
-                          .castScreen(data.m3u8);
-                    },
-                    tooltip: '投屏',
-                  ),
-                  onTap: () {
-                    debugPrint('播放: ${data.m3u8}');
-                  },
-                );
-              }).toList(),
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
             );
           }).toList(),
         ),
@@ -387,8 +366,9 @@ class _LocalStorageViewState extends State<LocalStorageView> with SignalsMixin {
   String _formatFileSize(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024)
+    if (bytes < 1024 * 1024 * 1024) {
       return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 

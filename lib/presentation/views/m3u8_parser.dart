@@ -252,57 +252,117 @@ class _M3u8ParserViewState extends State<M3u8ParserView> {
               ),
             ),
 
-            // 解析结果区域 - 只在单集解析模式下显示
-            if (widget.viewModel.parseResults.isNotEmpty &&
-                !widget.viewModel.isBatchMode.value)
+            // 解析结果区域
+            if ((widget.viewModel.parseResults.isNotEmpty &&
+                    !widget.viewModel.isBatchMode.value) ||
+                (widget.viewModel.batchParseResults.value.isNotEmpty &&
+                    widget.viewModel.isBatchMode.value))
               Expanded(
                 flex: 1,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.0),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: Text(
-                        '解析结果:',
-                        style: TextStyle(
+                        widget.viewModel.isBatchMode.value
+                            ? '批量解析结果:'
+                            : '解析结果:',
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
                       ),
                     ),
                     Expanded(
-                      child: ListView.builder(
-                        itemCount: widget.viewModel.parseResults.length,
-                        itemBuilder: (context, index) {
-                          final url = widget.viewModel.parseResults[index];
-                          return ListTile(
-                            title: Text(url),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.cast),
-                              onPressed: () async {
-                                // final castUrl =
-                                //     "${remoteStorageUrl.value}/$url";
-                                // debugPrint('投屏: [$castUrl]');
-                                final device = await widget.viewModel.crudDevice
-                                    .getConnectedDevice();
-                                if (device == null) {
-                                  if (!context.mounted) return;
-                                  _showErrorSnackBar('未连接设备');
-                                  return;
-                                }
-                                await widget.viewModel.controlDevice
-                                    .castScreen(url);
-                              },
-                              tooltip: '投屏',
-                            ),
-                            onTap: () async {
-                              final device = await widget.viewModel.crudDevice
-                                  .getConnectedDevice();
-                              debugPrint('device: $device');
+                      child: Watch((context) {
+                        // 单集解析模式
+                        if (!widget.viewModel.isBatchMode.value) {
+                          return ListView.builder(
+                            itemCount: widget.viewModel.parseResults.length,
+                            itemBuilder: (context, index) {
+                              final url = widget.viewModel.parseResults[index];
+                              return ListTile(
+                                title: Text(url),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.cast),
+                                  onPressed: () async {
+                                    final device = await widget
+                                        .viewModel.crudDevice
+                                        .getConnectedDevice();
+                                    if (device == null) {
+                                      if (!context.mounted) return;
+                                      _showErrorSnackBar('未连接设备');
+                                      return;
+                                    }
+                                    await widget.viewModel.controlDevice
+                                        .castScreen(url);
+                                  },
+                                  tooltip: '投屏',
+                                ),
+                                onTap: () async {
+                                  final device = await widget
+                                      .viewModel.crudDevice
+                                      .getConnectedDevice();
+                                  debugPrint('device: $device');
+                                },
+                              );
                             },
                           );
-                        },
-                      ),
+                        }
+                        // 批量解析模式
+                        else {
+                          final batchResults =
+                              widget.viewModel.batchParseResults.value;
+                          final sortedEpisodes = batchResults.keys.toList()
+                            ..sort();
+
+                          return ListView.builder(
+                            itemCount: sortedEpisodes.length,
+                            itemBuilder: (context, index) {
+                              final episode = sortedEpisodes[index];
+                              final episodeResults =
+                                  batchResults[episode] ?? [];
+
+                              return ExpansionTile(
+                                title: Text(
+                                    '第 $episode 集 (${episodeResults.length} 个视频)'),
+                                children: episodeResults.map((result) {
+                                  return ListTile(
+                                    title: Text(result.name ?? result.m3u8),
+                                    subtitle: result.url != null &&
+                                            result.url!.isNotEmpty
+                                        ? Text('来源: ${result.url}')
+                                        : null,
+                                    trailing: IconButton(
+                                      icon: const Icon(Icons.cast),
+                                      onPressed: () async {
+                                        final device = await widget
+                                            .viewModel.crudDevice
+                                            .getConnectedDevice();
+                                        if (device == null) {
+                                          if (!context.mounted) return;
+                                          _showErrorSnackBar('未连接设备');
+                                          return;
+                                        }
+                                        await widget.viewModel.controlDevice
+                                            .castScreen(result.m3u8);
+                                      },
+                                      tooltip: '投屏',
+                                    ),
+                                    onTap: () async {
+                                      final device = await widget
+                                          .viewModel.crudDevice
+                                          .getConnectedDevice();
+                                      debugPrint('device: $device');
+                                    },
+                                  );
+                                }).toList(),
+                              );
+                            },
+                          );
+                        }
+                      }),
                     ),
                   ],
                 ),

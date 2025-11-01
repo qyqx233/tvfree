@@ -51,14 +51,9 @@ TvSearchRs _$TvSearchRsFromJson(Map<String, dynamic> json) => TvSearchRs(
       data: (json['data'] as Map<String, dynamic>).map(
         (k, e) => MapEntry(
             k,
-            (e as Map<String, dynamic>).map(
-              (k, e) => MapEntry(
-                  k,
-                  (e as List<dynamic>)
-                      .map((e) =>
-                          TvSearchData.fromJson(e as Map<String, dynamic>))
-                      .toList()),
-            )),
+            (e as List<dynamic>)
+                .map((e) => TvSearchData.fromJson(e as Map<String, dynamic>))
+                .toList()),
       ),
     );
 
@@ -70,11 +65,13 @@ Map<String, dynamic> _$TvSearchRsToJson(TvSearchRs instance) =>
     };
 
 TvSearchData _$TvSearchDataFromJson(Map<String, dynamic> json) => TvSearchData(
+      channel: json['channel']?.toString() ?? '',
       m3u8: json['m3u8'] as String,
     );
 
 Map<String, dynamic> _$TvSearchDataToJson(TvSearchData instance) =>
     <String, dynamic>{
+      'channel': instance.channel,
       'm3u8': instance.m3u8,
     };
 

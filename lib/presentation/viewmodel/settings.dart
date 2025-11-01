@@ -37,7 +37,20 @@ class SettingsVM {
   void _setupParserWatcher() {
     _parserSubscription = _m3u8ParserService.watchAll().listen((parserList) {
       parsers.value = parserList;
+      // 更新活跃解析器信号
+      _updateActiveParserSignal();
     });
+  }
+
+  void _updateActiveParserSignal() {
+    try {
+      final active = parsers.firstWhere((parser) => parser.isActive);
+      parseM3U8EndpointSignal.value = active.url ?? '';
+      m3u8SkSignal.value = active.sk;
+    } catch (e) {
+      parseM3U8EndpointSignal.value = '';
+      m3u8SkSignal.value = null;
+    }
   }
 
   // 加载设置
@@ -186,6 +199,11 @@ class SettingsVM {
     try {
       await _m3u8ParserService.update(parser);
       // 不再需要手动刷新，watchAll 会自动检测变化
+      // 如果更新的是活跃状态，立即更新信号
+      if (parser.isActive) {
+        parseM3U8EndpointSignal.value = parser.url ?? '';
+        m3u8SkSignal.value = parser.sk;
+      }
     } catch (e) {
       if (kDebugMode) {
         debugPrint('更新解析器失败: $e');
