@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:signals/signals_flutter.dart';
 import 'package:tvfree/domain/signals/signals.dart';
 import 'package:tvfree/presentation/viewmodel/resource.dart';
@@ -106,7 +107,7 @@ class _RemoteResourceViewState extends State<RemoteResourceView>
     });
   }
 
-  Widget _buildParseResults() {
+  Widget _buildSearchResults() {
     return Watch((context) {
       final results = widget.viewModel.searchResults.value;
       if (results == null) return const SizedBox.shrink();
@@ -124,46 +125,125 @@ class _RemoteResourceViewState extends State<RemoteResourceView>
 
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '第$episode集',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8.0,
-                      runSpacing: 4.0,
-                      children: channels.map((channelData) {
-                        return ActionChip(
-                          label: Text(channelData.channel),
-                          onPressed: () async {
-                            debugPrint('播放: ${channelData.m3u8}');
-                            final device = await widget.viewModel.crudDevice
-                                .getConnectedDevice();
-                            if (device == null) {
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('未连接设备')),
-                              );
-                              return;
-                            }
-                            await widget.viewModel.controlDevice
-                                .castScreen(channelData.m3u8);
-                          },
-                          backgroundColor: Colors.blue.shade50,
-                          side: BorderSide(color: Colors.blue.shade200),
-                        );
-                      }).toList(),
-                    ),
-                  ],
+              child: ExpansionTile(
+                title: Text(
+                  '第$episode集',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+                subtitle: Text('共 ${channels.length} 个播放链接'),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      children: [
+                        // 显示每集下的所有记录，包括渠道名称和m3u8链接
+                        ...channels.asMap().entries.map((channelEntry) {
+                          final index = channelEntry.key;
+                          final channelData = channelEntry.value;
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8.0),
+                            padding: const EdgeInsets.all(8.0),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(4.0),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        '渠道: ${channelData.channel}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.cast, size: 20),
+                                      onPressed: () async {
+                                        final device = await widget
+                                            .viewModel.crudDevice
+                                            .getConnectedDevice();
+                                        if (device == null) {
+                                          if (!context.mounted) return;
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                                content: Text('未连接设备')),
+                                          );
+                                          return;
+                                        }
+                                        await widget.viewModel.controlDevice
+                                            .castScreen(channelData.m3u8);
+                                      },
+                                      tooltip: '投屏',
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                // 显示m3u8链接
+                                Container(
+                                  padding: const EdgeInsets.all(6.0),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(4.0),
+                                    border:
+                                        Border.all(color: Colors.blue.shade200),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.link,
+                                          size: 16, color: Colors.blue),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          channelData.m3u8,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.blue,
+                                            fontFamily: 'monospace',
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.copy, size: 16),
+                                        onPressed: () async {
+                                          // 复制m3u8链接到剪贴板
+                                          await Clipboard.setData(ClipboardData(
+                                              text: channelData.m3u8));
+                                          if (!context.mounted) return;
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                                content: Text('链接已复制到剪贴板')),
+                                          );
+                                        },
+                                        tooltip: '复制链接',
+                                        constraints: const BoxConstraints(
+                                          minWidth: 24,
+                                          minHeight: 24,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             );
           }).toList(),
@@ -186,7 +266,7 @@ class _RemoteResourceViewState extends State<RemoteResourceView>
             const SizedBox(height: 16),
             _buildLoadingIndicator(),
             // _buildSearchResults(),
-            _buildParseResults(),
+            _buildSearchResults(),
           ],
         ),
       ),

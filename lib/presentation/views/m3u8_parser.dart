@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:signals/signals_flutter.dart';
-import 'package:tvfree/domain/signals/signals.dart';
+import 'package:tvfree/data/repository/restful.dart';
 import 'package:tvfree/presentation/viewmodel/m3u8_parser.dart';
 
 class M3u8ParserView extends StatefulWidget {
@@ -317,47 +317,61 @@ class _M3u8ParserViewState extends State<M3u8ParserView> {
                           final sortedEpisodes = batchResults.keys.toList()
                             ..sort();
 
-                          return ListView.builder(
-                            itemCount: sortedEpisodes.length,
-                            itemBuilder: (context, index) {
-                              final episode = sortedEpisodes[index];
-                              final episodeResults =
-                                  batchResults[episode] ?? [];
+                          // 创建一个包含集数和结果的列表
+                          List<Map<String, dynamic>> allResults = [];
+                          for (final episode in sortedEpisodes) {
+                            final episodeResults = batchResults[episode] ?? [];
+                            for (final result in episodeResults) {
+                              allResults.add({
+                                'episode': episode,
+                                'data': result,
+                              });
+                            }
+                          }
 
-                              return ExpansionTile(
-                                title: Text(
-                                    '第 $episode 集 (${episodeResults.length} 个视频)'),
-                                children: episodeResults.map((result) {
-                                  return ListTile(
-                                    title: Text(result.name ?? result.m3u8),
-                                    subtitle: result.url != null &&
-                                            result.url!.isNotEmpty
-                                        ? Text('来源: ${result.url}')
-                                        : null,
-                                    trailing: IconButton(
-                                      icon: const Icon(Icons.cast),
-                                      onPressed: () async {
-                                        final device = await widget
-                                            .viewModel.crudDevice
-                                            .getConnectedDevice();
-                                        if (device == null) {
-                                          if (!context.mounted) return;
-                                          _showErrorSnackBar('未连接设备');
-                                          return;
-                                        }
-                                        await widget.viewModel.controlDevice
-                                            .castScreen(result.m3u8);
-                                      },
-                                      tooltip: '投屏',
-                                    ),
-                                    onTap: () async {
-                                      final device = await widget
-                                          .viewModel.crudDevice
-                                          .getConnectedDevice();
-                                      debugPrint('device: $device');
-                                    },
-                                  );
-                                }).toList(),
+                          return ListView.builder(
+                            itemCount: allResults.length,
+                            itemBuilder: (context, index) {
+                              final item = allResults[index];
+                              final episode = item['episode'] as int;
+                              final result = item['data'] as ParseM3u8Data;
+
+                              return ListTile(
+                                title: Text(result.name?.isNotEmpty == true
+                                    ? result.name!
+                                    : result.m3u8),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('第 $episode 集'),
+                                    if (result.url != null &&
+                                        result.url!.isNotEmpty)
+                                      Text('来源: ${result.url}'),
+                                    Text('M3U8: ${result.m3u8}'),
+                                  ],
+                                ),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.cast),
+                                  onPressed: () async {
+                                    final device = await widget
+                                        .viewModel.crudDevice
+                                        .getConnectedDevice();
+                                    if (device == null) {
+                                      if (!context.mounted) return;
+                                      _showErrorSnackBar('未连接设备');
+                                      return;
+                                    }
+                                    await widget.viewModel.controlDevice
+                                        .castScreen(result.m3u8);
+                                  },
+                                  tooltip: '投屏',
+                                ),
+                                onTap: () async {
+                                  final device = await widget
+                                      .viewModel.crudDevice
+                                      .getConnectedDevice();
+                                  debugPrint('device: $device');
+                                },
                               );
                             },
                           );
